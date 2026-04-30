@@ -1,0 +1,41 @@
+{
+  "tables": [
+    "users",
+    "ride_schedules",
+    "ride_requests",
+    "backup_rides",
+    "vehicles",
+    "drivers",
+    "payments",
+    "notifications"
+  ],
+  "relations": [
+    "User -> Ride (one-to-many)",
+    "User -> Vehicle (one-to-many)",
+    "Ride -> RideRequests (one-to-many)",
+    "Ride -> BackupRides (one-to-many)",
+    "Driver -> Vehicle (one-to-one)",
+    "RideRequest -> User (many-to-one)",
+    "Payment -> Ride (many-to-one)"
+  ],
+  "key_fields": {
+    "users": ["id", "email", "name", "department", "location", "preferences"],
+    "ride_schedules": ["id", "driver_id", "vehicle_id", "route", "departure_time", "arrival_time", "max_passengers"],
+    "ride_requests": ["id", "user_id", "ride_id", "status", "requested_at"],
+    "backup_rides": ["id", "original_ride_id", "replacement_ride_id", "triggered_at"],
+    "vehicles": ["id", "driver_id", "make", "model", "capacity", "license_plate"],
+    "drivers": ["id", "user_id", "rating", "verification_status", "verified_at"],
+    "payments": ["id", "ride_id", "user_id", "amount", "status"],
+    "notifications": ["id", "user_id", "type", "content", "sent_at"]
+  },
+  "primary_keys": {
+    "users": "id",
+    "ride_schedules": "id",
+    "ride_requests": "id",
+    "backup_rides": "id",
+    "vehicles": "id",
+    "drivers": "id",
+    "payments": "id",
+    "notifications": "id"
+  }
+}

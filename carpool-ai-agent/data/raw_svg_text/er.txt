@@ -1,0 +1,106 @@
+Entity Relationship Diagram - CarpoolHub
+
+ENTITIES:
+
+User
+├── id (PK)
+├── email (UNIQUE)
+├── name
+├── phone
+├── department
+├── home_location
+├── work_location
+├── preferences (JSON)
+├── rating
+├── created_at
+└── updated_at
+
+Vehicle
+├── id (PK)
+├── driver_id (FK -> Driver)
+├── make
+├── model
+├── year
+├── license_plate (UNIQUE)
+├── capacity
+├── current_location
+└── status (active/inactive)
+
+RideSchedule
+├── id (PK)
+├── driver_id (FK -> Driver)
+├── vehicle_id (FK -> Vehicle)
+├── departure_location
+├── destination_location
+├── route_geometry
+├── departure_time
+├── arrival_time
+├── max_passengers
+├── current_passengers
+├── status (scheduled/in_progress/completed/cancelled)
+└── estimated_cost
+
+RideRequest
+├── id (PK)
+├── user_id (FK -> User)
+├── ride_schedule_id (FK -> RideSchedule)
+├── requested_at
+├── status (pending/accepted/rejected/completed)
+├── pickup_location
+├── dropoff_location
+└── payment_status
+
+BackupRide
+├── id (PK)
+├── original_ride_id (FK -> RideSchedule)
+├── backup_ride_id (FK -> RideSchedule)
+├── triggered_reason
+├── triggered_at
+└── status (active/completed)
+
+Payment
+├── id (PK)
+├── ride_request_id (FK -> RideRequest)
+├── amount
+├── currency
+├── method (card/wallet/corporate)
+├── status (pending/completed/failed/refunded)
+├── transaction_id
+└── created_at
+
+Driver
+├── id (PK)
+├── user_id (FK -> User, UNIQUE)
+├── license_number
+├── verification_status
+├── verified_at
+├── rating
+├── completed_rides
+└── total_co2_saved
+
+Notification
+├── id (PK)
+├── user_id (FK -> User)
+├── type (ride_match/ride_start/ride_end/payment/alert)
+├── content
+├── read
+├── sent_at
+└── read_at
+
+RELATIONSHIPS:
+
+User (1) -> (M) RideRequest
+User (1) -> (1) Driver [optional - user can be driver]
+User (1) -> (M) Payment
+User (1) -> (M) Notification
+
+Driver (1) -> (M) RideSchedule
+Driver (1) -> (1) Vehicle
+
+Vehicle (1) -> (M) RideSchedule
+
+RideSchedule (1) -> (M) RideRequest
+RideSchedule (1) -> (M) BackupRide [as original]
+RideSchedule (1) -> (M) BackupRide [as backup]
+
+RideRequest (1) -> (1) Payment

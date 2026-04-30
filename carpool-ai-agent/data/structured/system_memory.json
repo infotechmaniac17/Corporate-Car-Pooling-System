@@ -1,0 +1,128 @@
+{
+  "system": {
+    "name": "CarpoolHub",
+    "description": "Corporate Carpooling Platform",
+    "services": [
+      "User Service",
+      "Ride Service",
+      "Matching Engine",
+      "Payment Service",
+      "Notification Service",
+      "Analytics Service",
+      "API Gateway"
+    ],
+    "external_services": [
+      "Google Maps",
+      "Stripe",
+      "SendGrid",
+      "Auth0"
+    ]
+  },
+  "database": {
+    "tables": [
+      "users",
+      "vehicles",
+      "ride_schedules",
+      "ride_requests",
+      "payments",
+      "drivers",
+      "notifications",
+      "backup_rides"
+    ]
+  },
+  "flows": {
+    "ride_flow": [
+      "search",
+      "request",
+      "accept",
+      "start",
+      "end",
+      "rate"
+    ],
+    "backup_flow": [
+      "cancel",
+      "trigger_backup",
+      "notify_next",
+      "confirm",
+      "restart"
+    ],
+    "payment_flow": [
+      "calculate_cost",
+      "process_payment",
+      "send_receipt",
+      "reconcile"
+    ]
+  },
+  "relationships": [
+    {
+      "source": "User Service",
+      "target": "users",
+      "type": "manages"
+    },
+    {
+      "source": "User Service",
+      "target": "drivers",
+      "type": "manages"
+    },
+    {
+      "source": "Ride Service",
+      "target": "ride_schedules",
+      "type": "manages"
+    },
+    {
+      "source": "Ride Service",
+      "target": "ride_requests",
+      "type": "manages"
+    },
+    {
+      "source": "Matching Engine",
+      "target": "ride_schedules",
+      "type": "matches"
+    },
+    {
+      "source": "Matching Engine",
+      "target": "users",
+      "type": "analyzes"
+    },
+    {
+      "source": "Payment Service",
+      "target": "payments",
+      "type": "processes"
+    },
+    {
+      "source": "Notification Service",
+      "target": "notifications",
+      "type": "sends"
+    },
+    {
+      "source": "Notification Service",
+      "target": "users",
+      "type": "alerts"
+    },
+    {
+      "source": "Analytics Service",
+      "target": "ride_schedules",
+      "type": "analyzes"
+    },
+    {
+      "source": "API Gateway",
+      "target": "User Service",
+      "type": "routes"
+    },
+    {
+      "source": "API Gateway",
+      "target": "Ride Service",
+      "type": "routes"
+    },
+    {
+      "source": "API Gateway",
+      "target": "Matching Engine",
+      "type": "routes"
+    },
+    {
+      "source": "API Gateway",
+      "target": "Payment Service",
+      "type": "routes"
+    }
+  ]
+}

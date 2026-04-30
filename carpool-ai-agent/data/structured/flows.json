@@ -1,0 +1,46 @@
+{
+  "ride_flow": {
+    "steps": ["search", "request", "accept", "start", "end"],
+    "description": "Main ride lifecycle from search to completion",
+    "details": {
+      "search": "User searches for available rides based on route and time",
+      "request": "User sends ride request to driver",
+      "accept": "Driver accepts or rejects ride request",
+      "start": "Driver and passenger confirm ride start",
+      "end": "Ride completed, payment processed, ratings collected"
+    }
+  },
+  "backup_flow": {
+    "steps": ["cancel", "trigger_backup", "notify_next", "confirm", "restart_ride"],
+    "description": "Handles ride cancellations and automatic backup driver assignment",
+    "details": {
+      "cancel": "Original driver cancels ride",
+      "trigger_backup": "System identifies next best driver from backup list",
+      "notify_next": "Notification sent to backup driver",
+      "confirm": "Backup driver confirms availability",
+      "restart_ride": "New ride session starts with backup driver"
+    }
+  },
+  "payment_flow": {
+    "steps": ["ride_end", "calculate_cost", "process_payment", "receipt", "reconciliation"],
+    "description": "Payment processing after ride completion",
+    "details": {
+      "ride_end": "Ride marked as complete",
+      "calculate_cost": "System calculates fare based on distance and time",
+      "process_payment": "Payment processed through payment gateway",
+      "receipt": "Receipt generated and sent to user",
+      "reconciliation": "Weekly reconciliation with accounting"
+    }
+  },
+  "matching_flow": {
+    "steps": ["ai_matching", "preference_filter", "route_optimization", "offer_generation", "user_notification"],
+    "description": "AI-powered ride matching algorithm",
+    "details": {
+      "ai_matching": "LangGraph-based intent router analyzes user preferences",
+      "preference_filter": "Filters rides based on user sustainability goals",
+      "route_optimization": "Optimizes route for cost and time efficiency",
+      "offer_generation": "Creates personalized ride offers",
+      "user_notification": "Sends notification with ride options"
+    }
+  }
+}
