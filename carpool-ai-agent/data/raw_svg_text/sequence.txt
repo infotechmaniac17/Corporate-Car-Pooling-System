@@ -1,0 +1,106 @@
+Sequence Diagram - Ride Booking Flow
+
+ACTORS:
+- User (U)
+- Frontend (F)
+- API Gateway (AG)
+- Ride Service (RS)
+- Matching Service (MS)
+- User Service (US)
+- Database (DB)
+
+SEQUENCE:
+
+1. User Initiates Search
+   U -> F: Opens app, searches for rides
+   F -> AG: GET /rides/available?from=A&to=B&date=D
+   AG -> RS: Routes request
+
+2. Ride Service Queries Database
+   RS -> DB: SELECT rides WHERE from=A, to=B, date=D
+   DB --> RS: Returns available rides
+
+3. Matching Service Processes Results
+   RS -> MS: POST /match/find-ride {user_id, preferences}
+   MS -> US: GET /users/{user_id}/preferences
+   US -> DB: SELECT user_preferences
+   DB --> US: Returns preferences
+   US --> MS: Returns user preferences
+
+4. AI Matching
+   MS -> MS: Run LangGraph intent router
+   MS -> MS: Filter by user sustainability goals
+   MS -> MS: Route optimization
+   MS -> MS: Generate personalized offers
+
+5. Results to User
+   MS --> RS: Returns ranked ride matches
+   RS --> AG: Returns rides with scores
+   AG --> F: Returns ride options
+   F --> U: Displays matched rides
+
+6. User Selects Ride
+   U -> F: Clicks "Request Ride"
+   F -> AG: POST /rides/{ride_id}/request
+   AG -> RS: Routes request
+   RS -> DB: INSERT INTO ride_requests
+
+7. Driver Notification
+   RS -> MS: Trigger notification
+   MS -> AG: Send notification to driver
+   AG --> F: Update request status to pending
+   F --> U: Show "Request sent"
+
+8. Driver Decision
+   U2 (Driver) -> F: Accepts/Rejects request
+   F -> AG: PUT /rides/{ride_id}/request/{id}/status
+   AG -> RS: Update status
+   RS -> DB: UPDATE ride_requests SET status='accepted'
+
+9. Confirmation to User
+   RS -> AG: Send notification
+   AG --> F: Update UI with acceptance
+   F --> U: Show "Ride Confirmed"
+
+10. Start Ride
+    U -> F: Confirm arrival at pickup
+    F -> AG: POST /rides/{ride_id}/start
+    AG -> RS: Update ride status to in_progress
+    RS -> DB: UPDATE ride_schedules SET status='in_progress'
+
+11. End Ride & Payment
+    U -> F: End ride
+    F -> AG: POST /rides/{ride_id}/end
+    AG -> RS: End ride
+    RS -> DB: UPDATE ride_schedules SET status='completed'
+    RS -> AG: Trigger payment processing
+    AG -> Payment Service: Process payment
+    Payment Service --> U: Send receipt
+
+BACKUP FLOW (if driver cancels):
+
+1. Driver Cancellation
+   U2 -> F: Clicks cancel ride
+   F -> AG: POST /rides/{ride_id}/cancel
+   AG -> RS: Cancel ride
+
+2. Backup Trigger
+   RS -> MS: GET backup_drivers for route
+   MS -> DB: Query backup_rides table
+   DB --> MS: Returns backup driver list
+
+3. Auto-assignment
+   MS -> MS: Select best backup driver
+   MS -> AG: Send notification to backup driver
+   AG --> F(backup): Ride request notification
+
+4. Backup Confirmation
+   U3 (Backup Driver) -> F: Accepts
+   F -> AG: Accept backup ride
+   AG -> RS: Update with new driver
+   RS -> DB: INSERT INTO backup_rides
+
+5. Original User Notified
+   RS -> AG: Notify original user of new driver
+   AG --> F(original): Update with new driver info
+   F(original) --> U: Show new driver details
