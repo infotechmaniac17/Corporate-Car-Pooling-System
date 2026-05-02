@@ -1,0 +1,33 @@
+package com.carpooling.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.locationtech.jts.geom.Point;
+
+import java.time.OffsetDateTime;
+
+@Entity
+@Table(name = "sos_incidents")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class SosIncident {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ride_id", nullable = false)
+    private RideSchedule rideSchedule;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "triggered_by", nullable = false)
+    private User triggeredBy;
+
+    @Column(columnDefinition = "geography(Point,4326)", nullable = false)
+    private Point location;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+}
