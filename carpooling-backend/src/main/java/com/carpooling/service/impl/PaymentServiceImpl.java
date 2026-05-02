@@ -2,11 +2,14 @@ package com.carpooling.service.impl;
 
 import com.carpooling.common.exception.BusinessException;
 import com.carpooling.common.exception.ResourceNotFoundException;
+import com.carpooling.dto.response.TransactionResponse;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.Transaction;
+import com.carpooling.entity.User;
 import com.carpooling.enums.TxnStatus;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.TransactionRepository;
+import com.carpooling.repository.UserRepository;
 import com.carpooling.service.PaymentService;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -26,6 +30,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final TransactionRepository transactionRepository;
     private final RideScheduleRepository rideScheduleRepository;
+    private final UserRepository userRepository;
 
     @Value("${razorpay.key-id}")
     private String razorpayKeyId;
@@ -35,12 +40,15 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public Transaction initiatePayment(Long rideId, BigDecimal amount, String paymentMethod) {
+    public Transaction initiatePayment(Long rideId, Long userId, BigDecimal amount, String paymentMethod) {
         RideSchedule schedule = rideScheduleRepository.findById(rideId)
                 .orElseThrow(() -> new ResourceNotFoundException("RideSchedule", rideId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         Transaction txn = transactionRepository.save(Transaction.builder()
                 .rideSchedule(schedule)
+                .user(user)
                 .amount(amount)
                 .status(TxnStatus.INITIATED)
                 .paymentMethod(paymentMethod)
@@ -84,5 +92,25 @@ public class PaymentServiceImpl implements PaymentService {
         }
         txn.setStatus(TxnStatus.REFUNDED);
         return transactionRepository.save(txn);
+    }
+
+    @Override
+    public List<TransactionResponse> getMyTransactions(Long userId) {
+        return transactionRepository.findByUserId(userId)
+                .stream().map(this::toResponse).toList();
+    }
+
+    private TransactionResponse toResponse(Transaction t) {
+        return TransactionResponse.builder()
+                .id(t.getId())
+                .rideId(t.getRideSchedule().getId())
+                .userId(t.getUser() != null ? t.getUser().getId() : null)
+                .amount(t.getAmount())
+                .status(t.getStatus().name())
+                .paymentMethod(t.getPaymentMethod())
+                .razorpayOrderId(t.getRazorpayOrderId())
+                .razorpayPaymentId(t.getRazorpayPaymentId())
+                .createdAt(t.getCreatedAt())
+                .build();
     }
 }

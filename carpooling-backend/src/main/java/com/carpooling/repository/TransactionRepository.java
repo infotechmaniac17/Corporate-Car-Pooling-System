@@ -11,4 +11,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByRideScheduleId(Long rideScheduleId);
     Optional<Transaction> findByRazorpayOrderId(String razorpayOrderId);
     List<Transaction> findByRideScheduleIdAndStatus(Long rideScheduleId, TxnStatus status);
+    List<Transaction> findByUserId(Long userId);
 }

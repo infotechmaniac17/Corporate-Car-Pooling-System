@@ -8,6 +8,9 @@ import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.User;
 import com.carpooling.enums.RequestStatus;
 import com.carpooling.enums.ScheduleStatus;
+import com.carpooling.entity.RidePassenger;
+import com.carpooling.enums.PassengerStatus;
+import com.carpooling.repository.RidePassengerRepository;
 import com.carpooling.repository.RideRequestRepository;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.UserRepository;
@@ -30,6 +33,7 @@ public class RideRequestServiceImpl implements RideRequestService {
     private final RideRequestRepository rideRequestRepository;
     private final RideScheduleRepository rideScheduleRepository;
     private final UserRepository userRepository;
+    private final RidePassengerRepository ridePassengerRepository;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -85,6 +89,12 @@ public class RideRequestServiceImpl implements RideRequestService {
             }
             schedule.setAvailableSeats((short) (schedule.getAvailableSeats() - 1));
             rideScheduleRepository.save(schedule);
+
+            ridePassengerRepository.save(RidePassenger.builder()
+                    .ride(schedule)
+                    .passenger(request.getPassenger())
+                    .status(PassengerStatus.ACTIVE)
+                    .build());
         }
 
         return rideRequestRepository.save(request);

@@ -1,5 +1,6 @@
 package com.carpooling.dto.request;
 
+import com.carpooling.enums.GenderPreference;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -22,4 +23,6 @@ public class CreateRideScheduleRequest {
 
     @DecimalMin("0.0") @DecimalMax("100.0")
     private BigDecimal detourLimitPercent = BigDecimal.valueOf(20.00);
+
+    private GenderPreference genderPreference;
 }

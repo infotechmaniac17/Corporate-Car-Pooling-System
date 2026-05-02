@@ -62,7 +62,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User", request.getEmail()));
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name());
@@ -72,18 +72,40 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     public UserResponse getUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("User", userId);
+        }
         return toResponse(user);
     }
 
     @Override
     public List<UserResponse> getUsersByOrganisation(Long organisationId) {
-        return userRepository.findByOrganisationId(organisationId)
+        return userRepository.findByOrganisationIdAndIsDeletedFalse(organisationId)
                 .stream().map(this::toResponse).toList();
     }
 
     @Override
+    @Transactional
+    public UserResponse toggleOnlineStatus(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        user.setIsOnline(!user.getIsOnline());
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        user.setIsDeleted(true);
+        user.setIsOnline(false);
+        userRepository.save(user);
+    }
+
+    @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
@@ -103,6 +125,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .rating(user.getRating())
                 .organisationId(user.getOrganisation().getId())
                 .organisationName(user.getOrganisation().getName())
+                .isOnline(user.getIsOnline())
                 .build();
     }
 }

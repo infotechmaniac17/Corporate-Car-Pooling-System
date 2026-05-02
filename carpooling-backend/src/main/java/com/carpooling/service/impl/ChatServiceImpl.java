@@ -3,6 +3,7 @@ package com.carpooling.service.impl;
 import com.carpooling.common.exception.BusinessException;
 import com.carpooling.common.exception.ResourceNotFoundException;
 import com.carpooling.dto.request.SendMessageRequest;
+import com.carpooling.dto.response.ChatMessageResponse;
 import com.carpooling.entity.ChatMessage;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.User;
@@ -36,8 +37,8 @@ public class ChatServiceImpl implements ChatService {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", senderId));
 
-        if (schedule.getStatus() != ScheduleStatus.ACTIVE) {
-            throw new BusinessException("Chat only available for active rides");
+        if (schedule.getStatus() != ScheduleStatus.ACTIVE && schedule.getStatus() != ScheduleStatus.STARTED) {
+            throw new BusinessException("Chat only available for active or started rides");
         }
 
         ChatMessage msg = chatMessageRepository.save(ChatMessage.builder()
@@ -60,7 +61,31 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public List<ChatMessage> getMessages(Long rideId) {
-        return chatMessageRepository.findByRideScheduleIdOrderByCreatedAtAsc(rideId);
+    public List<ChatMessageResponse> getMessages(Long rideId) {
+        return chatMessageRepository.findByRideScheduleIdOrderByCreatedAtAsc(rideId)
+                .stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public void markMessagesRead(Long rideId, Long userId) {
+        chatMessageRepository.markAllReadForUser(rideId, userId);
+    }
+
+    @Override
+    public long getUnreadCount(Long rideId, Long userId) {
+        return chatMessageRepository.countByRideScheduleIdAndIsReadFalseAndSenderIdNot(rideId, userId);
+    }
+
+    private ChatMessageResponse toResponse(ChatMessage m) {
+        return ChatMessageResponse.builder()
+                .id(m.getId())
+                .rideId(m.getRideSchedule().getId())
+                .senderId(m.getSender().getId())
+                .senderName(m.getSender().getName())
+                .message(m.getMessage())
+                .isRead(m.isRead())
+                .createdAt(m.getCreatedAt())
+                .build();
     }
 }

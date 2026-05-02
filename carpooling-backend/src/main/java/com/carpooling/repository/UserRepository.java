@@ -10,10 +10,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmailAndIsDeletedFalse(String email);
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
-    List<User> findByOrganisationId(Long organisationId);
+    List<User> findByOrganisationIdAndIsDeletedFalse(Long organisationId);
 
-    @Query("SELECT u FROM User u WHERE u.organisation.id = :orgId AND (u.role = 'DRIVER' OR u.role = 'BOTH')")
+    @Query("SELECT u FROM User u WHERE u.organisation.id = :orgId AND (u.role = 'DRIVER' OR u.role = 'BOTH') AND u.isDeleted = false")
     List<User> findDriversByOrganisation(@Param("orgId") Long organisationId);
 }
