@@ -43,6 +43,14 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column(name = "is_online", nullable = false)
+    @Builder.Default
+    private Boolean isOnline = false;
+
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

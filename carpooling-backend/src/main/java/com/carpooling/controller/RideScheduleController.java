@@ -56,9 +56,10 @@ public class RideScheduleController {
     @DeleteMapping("/{scheduleId}")
     public ResponseEntity<ApiResponse<Void>> cancelSchedule(
             @PathVariable Long scheduleId,
+            @RequestParam(required = false) String reason,
             HttpServletRequest httpRequest) {
         Long driverId = extractUserId(httpRequest);
-        rideScheduleService.cancelSchedule(scheduleId, driverId);
+        rideScheduleService.cancelSchedule(scheduleId, driverId, reason);
         return ResponseEntity.ok(ApiResponse.ok("Schedule cancelled", null));
     }
 

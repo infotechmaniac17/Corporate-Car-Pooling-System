@@ -3,7 +3,10 @@ package com.carpooling.service.impl;
 import com.carpooling.dto.request.MatchRideRequest;
 import com.carpooling.dto.response.MatchedRideResponse;
 import com.carpooling.entity.RideSchedule;
+import com.carpooling.entity.User;
+import com.carpooling.enums.GenderPreference;
 import com.carpooling.repository.RideScheduleRepository;
+import com.carpooling.repository.UserRepository;
 import com.carpooling.service.MatchingService;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
@@ -25,6 +28,7 @@ import java.util.List;
 public class MatchingServiceImpl implements MatchingService {
 
     private final RideScheduleRepository rideScheduleRepository;
+    private final UserRepository userRepository;
     private final JdbcTemplate jdbcTemplate;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
@@ -37,16 +41,19 @@ public class MatchingServiceImpl implements MatchingService {
 
         List<RideSchedule> candidates = rideScheduleRepository.findAvailableSchedules(from, to);
 
+        User passenger = userRepository.findById(passengerId).orElse(null);
+        String passengerGender = passenger != null ? passenger.getGender() : null;
+
         List<MatchedRideResponse> results = new ArrayList<>();
 
         for (RideSchedule schedule : candidates) {
             // Skip same user
             if (schedule.getDriver().getId().equals(passengerId)) continue;
 
-            // Gender filter
-            if (request.getGenderPreference() != null && !request.getGenderPreference().isBlank()) {
-                String driverGender = schedule.getDriver().getGender();
-                if (!request.getGenderPreference().equalsIgnoreCase(driverGender)) continue;
+            // Gender preference: ride restricts to specific gender — skip if passenger doesn't match
+            GenderPreference rideGenderPref = schedule.getGenderPreference();
+            if (rideGenderPref != null && rideGenderPref != GenderPreference.ANY) {
+                if (passengerGender == null || !rideGenderPref.name().equalsIgnoreCase(passengerGender)) continue;
             }
 
             // Proximity: pickup within search radius

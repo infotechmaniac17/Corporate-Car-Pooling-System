@@ -16,4 +16,5 @@ public class UserResponse {
     private BigDecimal rating;
     private Long organisationId;
     private String organisationName;
+    private Boolean isOnline;
 }

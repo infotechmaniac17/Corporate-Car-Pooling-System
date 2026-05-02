@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface RatingRepository extends JpaRepository<Rating, Long> {
     List<Rating> findByGivenToId(Long userId);
+    List<Rating> findByGivenById(Long userId);
     boolean existsByGivenByIdAndGivenToId(Long givenById, Long givenToId);
 
     @Query("SELECT AVG(r.score) FROM Rating r WHERE r.givenTo.id = :userId")

@@ -11,5 +11,5 @@ public interface RideScheduleService {
     RideScheduleResponse getSchedule(Long scheduleId);
     List<RideScheduleResponse> getDriverSchedules(Long driverId);
     RideScheduleResponse updateStatus(Long scheduleId, Long driverId, ScheduleStatus newStatus);
-    void cancelSchedule(Long scheduleId, Long driverId);
+    void cancelSchedule(Long scheduleId, Long driverId, String reason);
 }

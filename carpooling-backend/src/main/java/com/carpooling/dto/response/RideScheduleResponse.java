@@ -20,4 +20,6 @@ public class RideScheduleResponse {
     private Short availableSeats;
     private BigDecimal detourLimitPercent;
     private String status;
+    private String genderPreference;
+    private String cancelReason;
 }

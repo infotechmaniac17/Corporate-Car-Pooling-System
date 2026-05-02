@@ -12,4 +12,6 @@ public interface UserService {
     AuthResponse login(LoginRequest request);
     UserResponse getUser(Long userId);
     List<UserResponse> getUsersByOrganisation(Long organisationId);
+    UserResponse toggleOnlineStatus(Long userId);
+    void softDeleteUser(Long userId);
 }

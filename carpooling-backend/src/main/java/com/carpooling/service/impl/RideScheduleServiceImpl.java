@@ -9,6 +9,9 @@ import com.carpooling.entity.Route;
 import com.carpooling.entity.User;
 import com.carpooling.entity.Vehicle;
 import com.carpooling.enums.ScheduleStatus;
+import com.carpooling.entity.RidePassenger;
+import com.carpooling.enums.PassengerStatus;
+import com.carpooling.repository.RidePassengerRepository;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.RouteRepository;
 import com.carpooling.repository.UserRepository;
@@ -29,6 +32,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     private final UserRepository userRepository;
     private final VehicleRepository vehicleRepository;
     private final RouteRepository routeRepository;
+    private final RidePassengerRepository ridePassengerRepository;
 
     @Override
     @Transactional
@@ -51,6 +55,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
                 .departureTime(request.getDepartureTime())
                 .availableSeats(request.getAvailableSeats())
                 .detourLimitPercent(request.getDetourLimitPercent())
+                .genderPreference(request.getGenderPreference())
                 .status(ScheduleStatus.CREATED)
                 .build();
 
@@ -77,19 +82,36 @@ public class RideScheduleServiceImpl implements RideScheduleService {
         validateOwnership(schedule, driverId);
         validateTransition(schedule.getStatus(), newStatus);
         schedule.setStatus(newStatus);
-        return toResponse(rideScheduleRepository.save(schedule));
+        RideSchedule saved = rideScheduleRepository.save(schedule);
+
+        if (newStatus == ScheduleStatus.COMPLETED) {
+            ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)
+                    .forEach(rp -> {
+                        rp.setStatus(PassengerStatus.COMPLETED);
+                        ridePassengerRepository.save(rp);
+                    });
+        }
+
+        return toResponse(saved);
     }
 
     @Override
     @Transactional
-    public void cancelSchedule(Long scheduleId, Long driverId) {
+    public void cancelSchedule(Long scheduleId, Long driverId, String reason) {
         RideSchedule schedule = getScheduleOrThrow(scheduleId);
         validateOwnership(schedule, driverId);
         if (schedule.getStatus() == ScheduleStatus.COMPLETED) {
             throw new BusinessException("Cannot cancel completed ride");
         }
         schedule.setStatus(ScheduleStatus.CANCELLED);
+        schedule.setCancelReason(reason);
         rideScheduleRepository.save(schedule);
+
+        ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)
+                .forEach(rp -> {
+                    rp.setStatus(PassengerStatus.CANCELLED);
+                    ridePassengerRepository.save(rp);
+                });
     }
 
     private RideSchedule getScheduleOrThrow(Long id) {
@@ -106,7 +128,8 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     private void validateTransition(ScheduleStatus current, ScheduleStatus next) {
         boolean valid = switch (current) {
             case CREATED -> next == ScheduleStatus.ACTIVE || next == ScheduleStatus.CANCELLED;
-            case ACTIVE -> next == ScheduleStatus.COMPLETED || next == ScheduleStatus.CANCELLED;
+            case ACTIVE  -> next == ScheduleStatus.STARTED || next == ScheduleStatus.CANCELLED;
+            case STARTED -> next == ScheduleStatus.COMPLETED || next == ScheduleStatus.CANCELLED;
             default -> false;
         };
         if (!valid) {
@@ -128,6 +151,8 @@ public class RideScheduleServiceImpl implements RideScheduleService {
                 .availableSeats(s.getAvailableSeats())
                 .detourLimitPercent(s.getDetourLimitPercent())
                 .status(s.getStatus().name())
+                .genderPreference(s.getGenderPreference() != null ? s.getGenderPreference().name() : null)
+                .cancelReason(s.getCancelReason())
                 .build();
     }
 }

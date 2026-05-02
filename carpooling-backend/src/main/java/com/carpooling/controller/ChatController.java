@@ -3,6 +3,7 @@ package com.carpooling.controller;
 import com.carpooling.common.ApiResponse;
 import com.carpooling.config.JwtUtil;
 import com.carpooling.dto.request.SendMessageRequest;
+import com.carpooling.dto.response.ChatMessageResponse;
 import com.carpooling.entity.ChatMessage;
 import com.carpooling.service.ChatService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,9 +33,26 @@ public class ChatController {
     }
 
     @GetMapping("/ride/{rideId}")
-    public ResponseEntity<ApiResponse<List<ChatMessage>>> getMessages(
+    public ResponseEntity<ApiResponse<List<ChatMessageResponse>>> getMessages(
             @PathVariable Long rideId) {
         return ResponseEntity.ok(ApiResponse.ok(chatService.getMessages(rideId)));
+    }
+
+    @PatchMapping("/ride/{rideId}/read")
+    public ResponseEntity<ApiResponse<Void>> markRead(
+            @PathVariable Long rideId,
+            HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        chatService.markMessagesRead(rideId, userId);
+        return ResponseEntity.ok(ApiResponse.ok("Messages marked as read", null));
+    }
+
+    @GetMapping("/ride/{rideId}/unread")
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(
+            @PathVariable Long rideId,
+            HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(chatService.getUnreadCount(rideId, userId)));
     }
 
     private Long extractUserId(HttpServletRequest request) {

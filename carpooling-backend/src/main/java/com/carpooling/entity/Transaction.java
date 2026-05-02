@@ -21,6 +21,10 @@ public class Transaction {
     @JoinColumn(name = "ride_id", nullable = false)
     private RideSchedule rideSchedule;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
