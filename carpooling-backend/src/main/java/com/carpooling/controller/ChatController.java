@@ -1,0 +1,44 @@
+package com.carpooling.controller;
+
+import com.carpooling.common.ApiResponse;
+import com.carpooling.config.JwtUtil;
+import com.carpooling.dto.request.SendMessageRequest;
+import com.carpooling.entity.ChatMessage;
+import com.carpooling.service.ChatService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/chat")
+@RequiredArgsConstructor
+public class ChatController {
+
+    private final ChatService chatService;
+    private final JwtUtil jwtUtil;
+
+    @PostMapping("/send")
+    public ResponseEntity<ApiResponse<ChatMessage>> sendMessage(
+            @Valid @RequestBody SendMessageRequest request,
+            HttpServletRequest httpRequest) {
+        Long senderId = extractUserId(httpRequest);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(chatService.sendMessage(senderId, request)));
+    }
+
+    @GetMapping("/ride/{rideId}")
+    public ResponseEntity<ApiResponse<List<ChatMessage>>> getMessages(
+            @PathVariable Long rideId) {
+        return ResponseEntity.ok(ApiResponse.ok(chatService.getMessages(rideId)));
+    }
+
+    private Long extractUserId(HttpServletRequest request) {
+        String token = request.getHeader("Authorization").substring(7);
+        return jwtUtil.extractUserId(token);
+    }
+}
