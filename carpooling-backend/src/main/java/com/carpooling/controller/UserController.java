@@ -46,7 +46,14 @@ public class UserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable Long userId,
+            HttpServletRequest httpRequest) {
+        Long requesterId = extractUserId(httpRequest);
+        if (!requesterId.equals(userId)) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Cannot delete another user's account"));
+        }
         userService.softDeleteUser(userId);
         return ResponseEntity.ok(ApiResponse.ok("User deleted", null));
     }

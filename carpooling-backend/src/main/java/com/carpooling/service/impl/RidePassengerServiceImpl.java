@@ -7,6 +7,7 @@ import com.carpooling.entity.RidePassenger;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.User;
 import com.carpooling.enums.PassengerStatus;
+import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.repository.RidePassengerRepository;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.UserRepository;
@@ -34,6 +35,9 @@ public class RidePassengerServiceImpl implements RidePassengerService {
         User passenger = userRepository.findById(passengerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", passengerId));
 
+        if (ride.getStatus() != ScheduleStatus.ACTIVE && ride.getStatus() != ScheduleStatus.STARTED) {
+            throw new BusinessException("Can only join active or started rides");
+        }
         if (ridePassengerRepository.existsByRideIdAndPassengerId(rideId, passengerId)) {
             throw new BusinessException("Passenger already on this ride");
         }
