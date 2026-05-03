@@ -1,0 +1,223 @@
+{
+  "summary": {
+    "status": "FAILED",
+    "runId": 1777833824904,
+    "baseUrl": "http://localhost:8081/api",
+    "testEmail": "testuser_1777833824904@test.com",
+    "organisation": {
+      "id": 3,
+      "name": "Test"
+    },
+    "passed": [
+      "STEP-1: Fetch Organisations"
+    ],
+    "failed": [
+      {
+        "step": "STEP-2: Register",
+        "error": "HTTP 500: ",
+        "meta": {
+          "url": "http://localhost:8081/api/auth/register",
+          "method": "POST",
+          "status": 500,
+          "responseBody": {
+            "success": false,
+            "message": "Internal server error"
+          }
+        }
+      },
+      {
+        "step": "STEP-3: Login",
+        "error": "HTTP 401: ",
+        "meta": {
+          "url": "http://localhost:8081/api/auth/login",
+          "method": "POST",
+          "status": 401,
+          "responseBody": {
+            "success": false,
+            "message": "Invalid credentials"
+          }
+        }
+      },
+      {
+        "step": "STEP-4: Verify JWT",
+        "error": "Skipped — no token available"
+      }
+    ],
+    "registeredUserId": null
+  },
+  "logs": [
+    {
+      "timestamp": "2026-05-03T18:43:44.908Z",
+      "level": "INFO",
+      "step": "STEP-1",
+      "message": "Fetching organisations list",
+      "data": null
+    },
+    {
+      "timestamp": "2026-05-03T18:43:44.910Z",
+      "level": "INFO",
+      "step": "HTTP",
+      "message": "GET http://localhost:8081/api/organisations",
+      "data": null
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.015Z",
+      "level": "INFO",
+      "step": "HTTP",
+      "message": "← 200 ",
+      "data": {
+        "success": true,
+        "data": [
+          {
+            "id": 1,
+            "name": "Wipro Technologies Ltd",
+            "domain": "wipro.com",
+            "createdAt": "2026-05-03T12:22:18.066473Z"
+          },
+          {
+            "id": 2,
+            "name": "Google",
+            "domain": "gmail.com",
+            "createdAt": "2026-05-03T17:52:57.116904Z"
+          },
+          {
+            "id": 3,
+            "name": "Test",
+            "domain": "test.com",
+            "createdAt": "2026-05-03T18:37:36.381704Z"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.016Z",
+      "level": "SUCCESS",
+      "step": "STEP-1",
+      "message": "Retrieved 3 organisation(s)",
+      "data": [
+        {
+          "id": 1,
+          "name": "Wipro Technologies Ltd"
+        },
+        {
+          "id": 2,
+          "name": "Google"
+        },
+        {
+          "id": 3,
+          "name": "Test"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.016Z",
+      "level": "SUCCESS",
+      "step": "STEP-1",
+      "message": "Found \"test\" org",
+      "data": {
+        "id": 3,
+        "name": "Test"
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.016Z",
+      "level": "INFO",
+      "step": "STEP-2",
+      "message": "Registering test user",
+      "data": {
+        "email": "testuser_1777833824904@test.com",
+        "organisationId": 3
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.016Z",
+      "level": "INFO",
+      "step": "HTTP",
+      "message": "POST http://localhost:8081/api/auth/register",
+      "data": {
+        "name": "AutoTest 1777833824904",
+        "email": "testuser_1777833824904@test.com",
+        "password": "TestPass@123",
+        "phone": "+15550000000",
+        "role": "PASSENGER",
+        "organisationId": 3
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.135Z",
+      "level": "INFO",
+      "step": "HTTP",
+      "message": "← 500 ",
+      "data": {
+        "success": false,
+        "message": "Internal server error"
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.135Z",
+      "level": "ERROR",
+      "step": "STEP-2: Register",
+      "message": "HTTP 500: ",
+      "data": {
+        "url": "http://localhost:8081/api/auth/register",
+        "method": "POST",
+        "status": 500,
+        "responseBody": {
+          "success": false,
+          "message": "Internal server error"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.135Z",
+      "level": "INFO",
+      "step": "STEP-3",
+      "message": "Logging in with registered credentials",
+      "data": {
+        "email": "testuser_1777833824904@test.com"
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.135Z",
+      "level": "INFO",
+      "step": "HTTP",
+      "message": "POST http://localhost:8081/api/auth/login",
+      "data": {
+        "email": "testuser_1777833824904@test.com",
+        "password": "TestPass@123"
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.246Z",
+      "level": "INFO",
+      "step": "HTTP",
+      "message": "← 401 ",
+      "data": {
+        "success": false,
+        "message": "Invalid credentials"
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.246Z",
+      "level": "ERROR",
+      "step": "STEP-3: Login",
+      "message": "HTTP 401: ",
+      "data": {
+        "url": "http://localhost:8081/api/auth/login",
+        "method": "POST",
+        "status": 401,
+        "responseBody": {
+          "success": false,
+          "message": "Invalid credentials"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-05-03T18:43:45.246Z",
+      "level": "WARN",
+      "step": "RUNNER",
+      "message": "No token available to verify — both register and login failed",
+      "data": null
+    }
+  ]
+}

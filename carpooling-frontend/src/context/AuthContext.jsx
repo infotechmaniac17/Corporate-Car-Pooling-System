@@ -20,7 +20,8 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password);
-    const { token: jwt, user } = res.data;
+    const { token: jwt, userId, email: userEmail, role } = res.data.data;
+    const user = { id: userId, email: userEmail, role };
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));
     setToken(jwt);
@@ -30,7 +31,13 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (data) => {
     const res = await authApi.register(data);
-    return res.data;
+    const { token: jwt, userId, email: userEmail, role } = res.data.data;
+    const user = { id: userId, email: userEmail, role };
+    localStorage.setItem('wp_token', jwt);
+    localStorage.setItem('wp_user', JSON.stringify(user));
+    setToken(jwt);
+    setCurrentUser(user);
+    return user;
   }, []);
 
   const logout = useCallback(() => {
