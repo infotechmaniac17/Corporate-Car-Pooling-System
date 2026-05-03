@@ -1,10 +1,11 @@
 import React from 'react';
 import { Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import useIsDesktop from './hooks/useIsDesktop';
 
 import SplashScreen from './screens/SplashScreen';
-import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import HomeScreen from './screens/HomeScreen';
 import MatchingScreen from './screens/MatchingScreen';
 import TrackingScreen from './screens/TrackingScreen';
@@ -12,29 +13,50 @@ import ChatScreen from './screens/ChatScreen';
 import SosScreen from './screens/SosScreen';
 import DriverInboxScreen from './screens/DriverInboxScreen';
 import AdminDashboard from './admin/AdminDashboard';
+import WebLogin from './admin/WebLogin';
+import AppShell from './components/AppShell';
 
-function ProtectedRoute({ children, driverOnly = false }) {
-  const { isAuthenticated, isDriver, isAdmin } = useAuth();
+// ─── Guards ───────────────────────────────────────────────────────────────────
+
+function RootRedirect() {
+  const { isAuthenticated, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    if (isDesktop) {
+      return <SplashScreen onLogin={() => navigate('/login')} onSSO={() => navigate('/login')} />;
+    }
+    return (
+      <div className="device-frame">
+        <SplashScreen onLogin={() => navigate('/login')} onSSO={() => navigate('/login')} />
+      </div>
+    );
   }
-  if (driverOnly && !isDriver && !isAdmin) {
-    return <Navigate to="/home" replace />;
-  }
-
-  return (
-    <div className="device-frame">
-      {children}
-    </div>
-  );
+  return <Navigate to={isAdmin ? '/admin' : '/home'} replace />;
 }
 
-function AdminRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+// Rider / driver routes — desktop: AppShell sidebar; mobile: device-frame
+function UserRoute({ children, driverOnly = false }) {
+  const { isAuthenticated, isDriver, isAdmin } = useAuth();
+  const isDesktop = useIsDesktop();
+
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (driverOnly && !isDriver && !isAdmin) return <Navigate to="/home" replace />;
+
+  if (isDesktop) return <AppShell>{children}</AppShell>;
+  return <div className="device-frame">{children}</div>;
+}
+
+// Admin-only — full-width, no shell
+function AdminRoute({ children }) {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/home" replace />;
   return <>{children}</>;
 }
+
+// ─── Param wrappers ───────────────────────────────────────────────────────────
 
 function TrackingWrapper() {
   const { rideId } = useParams();
@@ -61,11 +83,6 @@ function SosWrapper() {
   return <SosScreen rideId={rideId} onCancel={() => navigate(-1)} />;
 }
 
-function DriverInboxWrapper() {
-  const { rideId } = useParams();
-  return <DriverInboxScreen rideId={rideId} />;
-}
-
 function MatchingWrapper() {
   const navigate = useNavigate();
   return (
@@ -78,39 +95,28 @@ function MatchingWrapper() {
   );
 }
 
-function RootRedirect() {
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  if (isAuthenticated) {
-    return <Navigate to="/home" replace />;
-  }
-
-  return (
-    <div className="device-frame">
-      <SplashScreen
-        onLogin={() => navigate('/login')}
-        onSSO={() => navigate('/login')}
-      />
-    </div>
-  );
-}
+// ─── Routes ──────────────────────────────────────────────────────────────────
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<RootRedirect />} />
-      <Route path="/login" element={<div className="device-frame"><LoginScreen /></div>} />
-      <Route path="/register" element={<div className="device-frame"><RegisterScreen /></div>} />
+      {/* Public */}
+      <Route path="/"                element={<RootRedirect />} />
+      <Route path="/login"           element={<WebLogin />} />
+      <Route path="/register"        element={<RegisterScreen />} />
+      <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
 
-      <Route path="/home" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
-      <Route path="/match" element={<ProtectedRoute><MatchingWrapper /></ProtectedRoute>} />
-      <Route path="/tracking/:rideId" element={<ProtectedRoute><TrackingWrapper /></ProtectedRoute>} />
-      <Route path="/chat/:rideId" element={<ProtectedRoute><ChatWrapper /></ProtectedRoute>} />
-      <Route path="/sos/:rideId" element={<ProtectedRoute><SosWrapper /></ProtectedRoute>} />
-      <Route path="/driver/inbox" element={<ProtectedRoute driverOnly><DriverInboxScreen /></ProtectedRoute>} />
-      <Route path="/driver/inbox/:rideId" element={<ProtectedRoute driverOnly><DriverInboxWrapper /></ProtectedRoute>} />
+      {/* Admin — full-width dashboard */}
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+
+      {/* Rider / driver — responsive (AppShell on desktop, device-frame on mobile) */}
+      <Route path="/home"             element={<UserRoute><HomeScreen /></UserRoute>} />
+      <Route path="/match"            element={<UserRoute><MatchingWrapper /></UserRoute>} />
+      <Route path="/tracking/:rideId" element={<UserRoute><TrackingWrapper /></UserRoute>} />
+      <Route path="/chat/:rideId"     element={<UserRoute><ChatWrapper /></UserRoute>} />
+      <Route path="/sos/:rideId"      element={<UserRoute><SosWrapper /></UserRoute>} />
+      <Route path="/driver/inbox"     element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
+      <Route path="/driver/inbox/:rideId" element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

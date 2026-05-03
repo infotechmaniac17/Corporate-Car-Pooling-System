@@ -1,3 +1,6 @@
+
+
+
 ╭─── Claude Code v2.1.126 ─────────────────────────────────────────────────────╮
 │                                                    │ Tips for getting        │
 │         Welcome back Prashant Sopan Berad!         │ started                 │
