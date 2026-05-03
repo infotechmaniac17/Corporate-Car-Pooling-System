@@ -34,7 +34,7 @@ public class User {
     private String gender;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "user_role")
+    @Column(nullable = false)
     private UserRole role;
 
     @Column(precision = 3, scale = 2)
@@ -43,13 +43,17 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    @Column(name = "is_online", nullable = false)
+    @Column(nullable = false)
     @Builder.Default
     private Boolean isOnline = false;
 
-    @Column(name = "is_deleted", nullable = false)
+    @Column(nullable = false)
     @Builder.Default
     private Boolean isDeleted = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isRead = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
