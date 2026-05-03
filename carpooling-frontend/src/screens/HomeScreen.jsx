@@ -70,7 +70,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     getMyRequests()
-      .then(res => setRides(res.data || []))
+      .then(res => setRides(res.data?.data || []))
       .catch(() => setRides([]))
       .finally(() => setLoading(false));
   }, []);
