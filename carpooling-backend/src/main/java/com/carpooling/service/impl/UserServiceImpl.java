@@ -1,3 +1,4 @@
+
 package com.carpooling.service.impl;
 
 import com.carpooling.common.exception.BusinessException;
@@ -12,7 +13,7 @@ import com.carpooling.entity.User;
 import com.carpooling.repository.OrganisationRepository;
 import com.carpooling.repository.UserRepository;
 import com.carpooling.service.UserService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl implements UserService, UserDetailsService {
 
     private final UserRepository userRepository;
@@ -33,6 +33,18 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+
+    public UserServiceImpl(UserRepository userRepository,
+                           OrganisationRepository organisationRepository,
+                           PasswordEncoder passwordEncoder,
+                           JwtUtil jwtUtil,
+                           @Lazy AuthenticationManager authenticationManager) {
+        this.userRepository = userRepository;
+        this.organisationRepository = organisationRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.authenticationManager = authenticationManager;
+    }
 
     @Override
     @Transactional
@@ -63,7 +75,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User", request.getEmail()));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name());
     }
