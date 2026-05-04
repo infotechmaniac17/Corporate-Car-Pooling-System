@@ -22,6 +22,25 @@ spring:
     filter:
       order: 10
 
+  # ─── Mail (SMTP) ──────────────────────────────────────────────────────────
+  # Gmail: enable 2-Step Verification, then create an App Password at
+  # https://myaccount.google.com/apppasswords and put the 16-char value in MAIL_PASSWORD.
+  # SendGrid: host=smtp.sendgrid.net, port=587, username=apikey, password=<API_KEY>.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:waypointcarpool@gmail.com}        # <-- UPDATE: your full sender email
+    password: ${MAIL_PASSWORD:rdym vxqc ounw fcde}        # <-- UPDATE: app password / API key
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        transport:
+          protocol: smtp
+
 server:
   port: 8081
   servlet:
@@ -34,6 +53,16 @@ jwt:
 razorpay:
   key-id: ${RAZORPAY_KEY_ID:}
   key-secret: ${RAZORPAY_KEY_SECRET:}
+
+app:
+  email:
+    from: ${MAIL_FROM:no-reply@waypoint.local}   # <-- UPDATE: from address shown to users
+    from-name: ${MAIL_FROM_NAME:Waypoint}
+  otp:
+    length: 6
+    expiry-minutes: 10
+    max-attempts: 5
+    cooldown-seconds: 60
 
 logging:
   level:

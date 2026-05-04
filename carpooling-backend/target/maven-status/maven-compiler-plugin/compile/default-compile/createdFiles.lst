@@ -5,6 +5,7 @@ com\carpooling\service\impl\TrackingServiceImpl.class
 com\carpooling\repository\RidePassengerRepository.class
 com\carpooling\dto\response\ChatMessageResponse$ChatMessageResponseBuilder.class
 com\carpooling\service\impl\UserServiceImpl.class
+com\carpooling\service\impl\EmailServiceImpl.class
 com\carpooling\dto\response\RouteWaypointResponse.class
 com\carpooling\dto\request\SendMessageRequest.class
 com\carpooling\service\RideRequestService.class
@@ -27,6 +28,7 @@ com\carpooling\service\impl\RideScheduleServiceImpl$1.class
 com\carpooling\repository\BackupRideRepository.class
 com\carpooling\service\RidePassengerService.class
 com\carpooling\service\SosService.class
+com\carpooling\service\EmailVerificationService.class
 com\carpooling\repository\RatingRepository.class
 com\carpooling\entity\Organisation$OrganisationBuilder.class
 com\carpooling\entity\User.class
@@ -35,6 +37,7 @@ com\carpooling\entity\BackupRide$BackupRideBuilder.class
 com\carpooling\entity\RideRequest.class
 com\carpooling\service\impl\RideScheduleServiceImpl.class
 com\carpooling\service\UserService.class
+com\carpooling\dto\request\SendOtpRequest.class
 com\carpooling\service\ChatService.class
 com\carpooling\service\impl\SosServiceImpl.class
 com\carpooling\entity\RideSchedule$RideScheduleBuilder.class
@@ -52,6 +55,7 @@ com\carpooling\dto\response\VehicleResponse$VehicleResponseBuilder.class
 com\carpooling\entity\RouteWaypoint.class
 com\carpooling\repository\RouteWaypointRepository.class
 com\carpooling\controller\RouteWaypointController.class
+com\carpooling\dto\request\VerifyOtpRequest.class
 com\carpooling\controller\UserController.class
 com\carpooling\dto\request\LoginRequest.class
 com\carpooling\service\PaymentService.class
@@ -63,6 +67,7 @@ com\carpooling\controller\MatchingController.class
 com\carpooling\entity\RideRequest$RideRequestBuilder.class
 com\carpooling\dto\request\RegisterRequest.class
 com\carpooling\controller\SosController.class
+com\carpooling\entity\EmailVerification.class
 com\carpooling\common\ApiResponse.class
 com\carpooling\common\exception\BusinessException.class
 com\carpooling\repository\TransactionRepository.class
@@ -109,6 +114,7 @@ com\carpooling\enums\GenderPreference.class
 com\carpooling\service\impl\BackupDriverServiceImpl.class
 com\carpooling\controller\ChatController.class
 com\carpooling\service\impl\OrganisationServiceImpl.class
+com\carpooling\service\impl\EmailVerificationServiceImpl.class
 com\carpooling\CarpoolingApplication.class
 com\carpooling\service\impl\PaymentServiceImpl.class
 com\carpooling\service\impl\VehicleServiceImpl.class
@@ -126,6 +132,7 @@ com\carpooling\entity\ChatMessage$ChatMessageBuilder.class
 com\carpooling\service\impl\RatingServiceImpl.class
 com\carpooling\enums\PassengerStatus.class
 com\carpooling\service\BackupDriverService.class
+com\carpooling\entity\EmailVerification$EmailVerificationBuilder.class
 com\carpooling\dto\response\SosIncidentResponse$SosIncidentResponseBuilder.class
 com\carpooling\entity\RidePassenger.class
 com\carpooling\entity\Route$RouteBuilder.class
@@ -134,6 +141,8 @@ com\carpooling\service\TrackingService.class
 com\carpooling\config\SecurityConfig.class
 com\carpooling\enums\UserRole.class
 com\carpooling\repository\RideScheduleRepository.class
+com\carpooling\service\EmailService.class
+com\carpooling\repository\EmailVerificationRepository.class
 com\carpooling\dto\request\LocationPingRequest.class
 com\carpooling\service\impl\GuardianContactServiceImpl.class
 com\carpooling\dto\request\CreateRideScheduleRequest.class
