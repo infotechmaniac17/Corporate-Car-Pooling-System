@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import WpButton from '../components/WpButton';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getAllOrganisations } from '../api/organisations';
+import { sendOtp as apiSendOtp } from '../api/auth';
 
 // ─── Module-level constants & components ─────────────────────────────────────
 
@@ -57,7 +58,7 @@ function Logo({ dark = false }) {
   );
 }
 
-function Field({ label, type = 'text', value, onChange, placeholder, required = false, minLength }) {
+function Field({ label, type = 'text', value, onChange, placeholder, required = false, minLength, autoComplete }) {
   return (
     <div>
       <label style={labelStyle}>{label}</label>
@@ -68,6 +69,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, required = 
         placeholder={placeholder}
         required={required}
         minLength={minLength}
+        autoComplete={autoComplete}
         style={inputStyle}
         onFocus={e => { e.target.style.borderColor = 'var(--ink-500)'; e.target.style.background = '#fff'; }}
         onBlur={e => { e.target.style.borderColor = 'var(--asphalt-200)'; e.target.style.background = 'var(--asphalt-50)'; }}
@@ -76,12 +78,89 @@ function Field({ label, type = 'text', value, onChange, placeholder, required = 
   );
 }
 
+function EmailWithOtp({ email, onChange, onSendOtp, otpSent, otpSending, cooldownSec }) {
+  const disabled = otpSending || cooldownSec > 0 || !isValidEmail(email);
+  const btnLabel = otpSending
+    ? 'Sending…'
+    : cooldownSec > 0
+      ? `Resend in ${cooldownSec}s`
+      : otpSent
+        ? 'Resend code'
+        : 'Send code';
+  return (
+    <div>
+      <label style={labelStyle}>Work Email</label>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          type="email"
+          value={email}
+          onChange={onChange}
+          placeholder="you@company.com"
+          required
+          autoComplete="email"
+          style={{ ...inputStyle, flex: 1 }}
+          onFocus={e => { e.target.style.borderColor = 'var(--ink-500)'; e.target.style.background = '#fff'; }}
+          onBlur={e => { e.target.style.borderColor = 'var(--asphalt-200)'; e.target.style.background = 'var(--asphalt-50)'; }}
+        />
+        <button
+          type="button"
+          onClick={onSendOtp}
+          disabled={disabled}
+          style={{
+            padding: '0 14px',
+            borderRadius: 'var(--radius-md)',
+            border: '1.5px solid var(--ink-600)',
+            background: disabled ? 'var(--asphalt-100)' : 'var(--ink-600)',
+            color: disabled ? 'var(--asphalt-400)' : '#fff',
+            font: '700 13px var(--font-sans)',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {btnLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function isValidEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s || '').trim());
+}
 
 const ROLES = [
   { value: 'PASSENGER', label: 'Rider' },
   { value: 'DRIVER',    label: 'Driver' },
   { value: 'BOTH',      label: 'Both' },
 ];
+
+const GENDERS = [
+  { value: 'MALE',                label: 'Male' },
+  { value: 'FEMALE',              label: 'Female' },
+  { value: 'OTHER',               label: 'Other' },
+  { value: 'PREFER_NOT_TO_SAY',   label: 'Prefer not to say' },
+];
+
+function Select({ label, value, onChange, options, placeholder, required = false }) {
+  return (
+    <div>
+      <label style={labelStyle}>{label}</label>
+      <select
+        value={value}
+        onChange={onChange}
+        required={required}
+        style={selectStyle}
+        onFocus={e => { e.target.style.borderColor = 'var(--ink-500)'; e.target.style.background = '#fff'; }}
+        onBlur={e => { e.target.style.borderColor = 'var(--asphalt-200)'; e.target.style.background = 'var(--asphalt-50)'; }}
+      >
+        <option value="">{placeholder}</option>
+        {options.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 function OrgSelect({ value, onChange, organisations, loading, required = true }) {
   return (
@@ -144,14 +223,30 @@ function RoleSelector({ role, onChange }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const INITIAL_FORM = {
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  phone: '',
+  gender: '',
+  role: 'PASSENGER',
+  organisationId: '',
+  otp: '',
+};
+
 export default function RegisterScreen() {
   const isDesktop = useIsDesktop();
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', role: 'PASSENGER', organisationId: '' });
+  const [form, setForm] = useState(INITIAL_FORM);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [organisations, setOrganisations] = useState([]);
   const [orgsLoading, setOrgsLoading] = useState(true);
   const [orgsError, setOrgsError] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [cooldownSec, setCooldownSec] = useState(0);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -162,19 +257,69 @@ export default function RegisterScreen() {
       .finally(() => setOrgsLoading(false));
   }, []);
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: field === 'organisationId' ? Number(e.target.value) : e.target.value }));
+  useEffect(() => {
+    if (cooldownSec <= 0) return;
+    const t = setTimeout(() => setCooldownSec(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldownSec]);
+
+  const set = (field) => (e) => {
+    const raw = e.target.value;
+    if (field === 'email') {
+      setOtpSent(false);
+      setForm(prev => ({ ...prev, email: raw, otp: '' }));
+      return;
+    }
+    const value = field === 'organisationId' ? Number(raw) : raw;
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
   const setRole = (r) => setForm(prev => ({ ...prev, role: r }));
+
+  const handleSendOtp = async () => {
+    setError('');
+    setInfo('');
+    if (!isValidEmail(form.email)) {
+      setError('Please enter a valid email before requesting a code.');
+      return;
+    }
+    setOtpSending(true);
+    try {
+      await apiSendOtp(form.email.trim().toLowerCase());
+      setOtpSent(true);
+      setCooldownSec(60);
+      setInfo('Verification code sent. Check your inbox.');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not send code. Please try again.');
+    } finally {
+      setOtpSending(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.organisationId) {
-      setError('Please select an organisation');
-      return;
-    }
     setError('');
+    setInfo('');
+
+    if (!form.organisationId) return setError('Please select an organisation.');
+    if (!form.gender)         return setError('Please select your gender.');
+    if (form.password.length < 8) return setError('Password must be at least 8 characters.');
+    if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
+    if (!otpSent)             return setError('Please request a verification code for your email.');
+    if (!form.otp || form.otp.length < 4) return setError('Please enter the verification code sent to your email.');
+
     setLoading(true);
     try {
-      await register(form);
+      const payload = {
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        phone: form.phone.trim(),
+        gender: form.gender,
+        role: form.role,
+        organisationId: form.organisationId,
+        otp: form.otp.trim(),
+      };
+      await register(payload);
       navigate('/login');
     } catch (err) {
       setError(err?.response?.data?.message || 'Registration failed. Please try again.');
@@ -182,6 +327,48 @@ export default function RegisterScreen() {
       setLoading(false);
     }
   };
+
+  const renderFormFields = () => (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <Field label="Full Name"    value={form.name}  onChange={set('name')}  placeholder="Jane Smith"        required autoComplete="name" />
+        <Field label="Phone Number" type="tel" value={form.phone} onChange={set('phone')} placeholder="+1 555 000 0000" required autoComplete="tel" />
+      </div>
+
+      <EmailWithOtp
+        email={form.email}
+        onChange={set('email')}
+        onSendOtp={handleSendOtp}
+        otpSent={otpSent}
+        otpSending={otpSending}
+        cooldownSec={cooldownSec}
+      />
+
+      {otpSent && (
+        <Field
+          label="Verification Code"
+          type="text"
+          value={form.otp}
+          onChange={set('otp')}
+          placeholder="6-digit code"
+          required
+          autoComplete="one-time-code"
+        />
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <OrgSelect value={form.organisationId} onChange={set('organisationId')} organisations={organisations} loading={orgsLoading} required />
+        <Select label="Gender" value={form.gender} onChange={set('gender')} options={GENDERS} placeholder="Select" required />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <Field label="Password"         type="password" value={form.password}        onChange={set('password')}        placeholder="••••••••" required minLength={8} autoComplete="new-password" />
+        <Field label="Confirm Password" type="password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="••••••••" required minLength={8} autoComplete="new-password" />
+      </div>
+
+      <RoleSelector role={form.role} onChange={setRole} />
+    </>
+  );
 
   if (isDesktop) {
     return (
@@ -198,7 +385,7 @@ export default function RegisterScreen() {
           <path d="M120 780 Q 400 600 720 450 T 1380 80" stroke="var(--voltage-400)" strokeWidth="2.5" fill="none" opacity="0.45" strokeLinecap="round" />
         </svg>
 
-        <div style={{ position: 'relative', background: '#fff', borderRadius: '20px', padding: '48px', width: '100%', maxWidth: '560px', boxShadow: '0 32px 80px rgba(7,10,38,0.5)' }}>
+        <div style={{ position: 'relative', background: '#fff', borderRadius: '20px', padding: '48px', width: '100%', maxWidth: '600px', boxShadow: '0 32px 80px rgba(7,10,38,0.5)' }}>
           <div style={{ marginBottom: '28px' }}>
             <Logo />
           </div>
@@ -211,6 +398,11 @@ export default function RegisterScreen() {
             <Link to="/login" style={{ color: 'var(--ink-600)', fontWeight: 600, textDecoration: 'none' }}>Sign in instead →</Link>
           </p>
 
+          {info && (
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'var(--ink-50)', color: 'var(--ink-700)', font: '500 13px var(--font-sans)', marginBottom: '16px' }}>
+              {info}
+            </div>
+          )}
           {error && (
             <div style={{ padding: '12px 16px', borderRadius: 10, background: 'var(--danger-100)', color: 'var(--danger-700)', font: '500 13px var(--font-sans)', marginBottom: '20px' }}>
               {error}
@@ -218,14 +410,7 @@ export default function RegisterScreen() {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <Field label="Full Name"    value={form.name}  onChange={set('name')}  placeholder="Jane Smith"        required />
-              <Field label="Phone Number" type="tel" value={form.phone} onChange={set('phone')} placeholder="+1 555 000 0000" required />
-            </div>
-            <Field label="Work Email" type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" required />
-            <OrgSelect value={form.organisationId} onChange={set('organisationId')} organisations={organisations} loading={orgsLoading} required />
-            <Field label="Password" type="password" value={form.password} onChange={set('password')} placeholder="••••••••" required minLength={8} />
-            <RoleSelector role={form.role} onChange={setRole} />
+            {renderFormFields()}
 
             <button
               type="submit"
@@ -268,14 +453,15 @@ export default function RegisterScreen() {
           </div>
         )}
 
+        {info && (
+          <div style={{ padding: '12px 16px', background: 'var(--ink-50)', borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--ink-700)', marginBottom: 16, fontFamily: 'var(--font-sans)' }}>
+            {info}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <Field label="Full Name"    value={form.name}  onChange={set('name')}  placeholder="Jane Smith"      required />
-            <Field label="Work Email"   type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" required />
-            <OrgSelect value={form.organisationId} onChange={set('organisationId')} organisations={organisations} loading={orgsLoading} />
-            <Field label="Password"     type="password" value={form.password} onChange={set('password')} placeholder="••••••••" required minLength={8} />
-            <Field label="Phone Number" type="tel" value={form.phone} onChange={set('phone')} placeholder="+1 555 000 0000" required />
-            <RoleSelector role={form.role} onChange={setRole} />
+            {renderFormFields()}
 
             {error && (
               <div style={{ padding: '12px 16px', background: 'var(--danger-100)', border: '1px solid var(--danger-500)', borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--danger-700)', fontFamily: 'var(--font-sans)' }}>

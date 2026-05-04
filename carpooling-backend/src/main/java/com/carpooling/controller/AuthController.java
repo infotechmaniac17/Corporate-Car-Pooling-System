@@ -44,4 +44,11 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(userService.login(request)));
     }
+
+    @PostMapping("/select-role")
+    public ResponseEntity<ApiResponse<AuthResponse>> selectRole(
+            @RequestParam Long userId,
+            @RequestParam String role) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.selectRole(userId, role)));
+    }
 }
