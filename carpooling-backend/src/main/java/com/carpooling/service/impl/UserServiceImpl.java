@@ -12,6 +12,7 @@ import com.carpooling.entity.Organisation;
 import com.carpooling.entity.User;
 import com.carpooling.repository.OrganisationRepository;
 import com.carpooling.repository.UserRepository;
+import com.carpooling.service.EmailVerificationService;
 import com.carpooling.service.UserService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,32 +34,39 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final EmailVerificationService emailVerificationService;
 
     public UserServiceImpl(UserRepository userRepository,
                            OrganisationRepository organisationRepository,
                            PasswordEncoder passwordEncoder,
                            JwtUtil jwtUtil,
-                           @Lazy AuthenticationManager authenticationManager) {
+                           @Lazy AuthenticationManager authenticationManager,
+                           EmailVerificationService emailVerificationService) {
         this.userRepository = userRepository;
         this.organisationRepository = organisationRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail() == null ? "" : request.getEmail().trim().toLowerCase();
+
+        emailVerificationService.verifyOtp(email, request.getOtp());
+
+        if (userRepository.existsByEmail(email)) {
             throw new BusinessException("Email already registered");
         }
         Organisation org = organisationRepository.findById(request.getOrganisationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Organisation", request.getOrganisationId()));
 
         User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
+                .name(request.getName().trim())
+                .email(email)
+                .phone(request.getPhone().trim())
                 .gender(request.getGender())
                 .role(request.getRole())
                 .organisation(org)
@@ -66,16 +74,19 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .build();
         user = userRepository.save(user);
 
+        emailVerificationService.consumeVerifiedOtp(email);
+
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name());
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
+        String email = request.getEmail() == null ? "" : request.getEmail().trim().toLowerCase();
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
+        User user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name());
     }

@@ -35,8 +35,10 @@ D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\RegisterRequest.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\RideRequestDto.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\SendMessageRequest.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\SendOtpRequest.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\TriggerSosRequest.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\VehicleRequest.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\VerifyOtpRequest.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\AuthResponse.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\ChatMessageResponse.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\GuardianContactResponse.java
@@ -52,6 +54,7 @@ D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\VehicleResponse.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\entity\BackupRide.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\entity\ChatMessage.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\entity\EmailVerification.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\entity\GuardianContact.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\entity\Organisation.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\entity\Rating.java
@@ -73,6 +76,7 @@ D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\enums\UserRole.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\repository\BackupRideRepository.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\repository\ChatMessageRepository.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\repository\EmailVerificationRepository.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\repository\GuardianContactRepository.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\repository\OrganisationRepository.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\repository\RatingRepository.java
@@ -88,9 +92,13 @@ D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\repository\VehicleRepository.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\BackupDriverService.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\ChatService.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\EmailService.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\EmailVerificationService.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\GuardianContactService.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\impl\BackupDriverServiceImpl.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\impl\ChatServiceImpl.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\impl\EmailServiceImpl.java
+D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\impl\EmailVerificationServiceImpl.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\impl\GuardianContactServiceImpl.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\impl\MatchingServiceImpl.java
 D:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\service\impl\OrganisationServiceImpl.java

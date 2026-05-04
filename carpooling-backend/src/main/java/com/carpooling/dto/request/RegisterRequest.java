@@ -18,6 +18,7 @@ public class RegisterRequest {
     @NotBlank
     private String phone;
 
+    @NotBlank
     private String gender;
 
     @NotNull
@@ -25,4 +26,8 @@ public class RegisterRequest {
 
     @NotNull
     private Long organisationId;
+
+    @NotBlank
+    @Size(min = 4, max = 8)
+    private String otp;
 }
