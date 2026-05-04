@@ -10,6 +10,7 @@ import java.util.List;
 public interface UserService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
+    AuthResponse selectRole(Long userId, String selectedRole);
     UserResponse getUser(Long userId);
     List<UserResponse> getUsersByOrganisation(Long organisationId);
     UserResponse toggleOnlineStatus(Long userId);

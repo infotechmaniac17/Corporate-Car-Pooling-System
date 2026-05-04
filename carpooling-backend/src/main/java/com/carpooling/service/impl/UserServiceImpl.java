@@ -87,8 +87,35 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 new UsernamePasswordAuthenticationToken(email, request.getPassword()));
         User user = userRepository.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+
+        if (user.getRole() == com.carpooling.enums.UserRole.BOTH) {
+            // Don't issue a real JWT yet — return a flag so frontend shows role selector
+            AuthResponse response = new AuthResponse();
+            response.setUserId(user.getId());
+            response.setEmail(user.getEmail());
+            response.setRole("BOTH");
+            response.setRequiresRoleSelection(true);
+            return response;
+        }
+
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name());
+    }
+
+    @Override
+    public AuthResponse selectRole(Long userId, String selectedRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        if (user.getRole() != com.carpooling.enums.UserRole.BOTH) {
+            throw new com.carpooling.common.exception.BusinessException("User does not have multiple roles");
+        }
+        if (!selectedRole.equals("DRIVER") && !selectedRole.equals("PASSENGER")) {
+            throw new com.carpooling.common.exception.BusinessException("Invalid role selection");
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getId(), selectedRole);
+        return new AuthResponse(token, user.getId(), user.getEmail(), selectedRole);
     }
 
     @Override
