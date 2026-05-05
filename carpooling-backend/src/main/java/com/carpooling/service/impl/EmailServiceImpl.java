@@ -110,6 +110,37 @@ public class EmailServiceImpl implements EmailService {
             """.formatted(name, plate, reason != null ? reason : "See admin note");
     }
 
+    @Override
+    public void sendPasswordResetEmail(String to, String resetLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setTo(to);
+            helper.setSubject("Reset your Waypoint password");
+            helper.setText(buildPasswordResetBody(resetLink), true);
+            mailSender.send(message);
+            log.info("Password reset email sent to {}", to);
+        } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
+            log.error("Failed to send password reset email to {}: {}", to, ex.getMessage(), ex);
+            throw new BusinessException("Could not send reset email. Please try again later.", HttpStatus.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private String buildPasswordResetBody(String resetLink) {
+        return """
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#222">
+              <h2 style="margin:0 0 12px">Reset your password</h2>
+              <p>We received a request to reset your Waypoint password. Click the button below to choose a new password.</p>
+              <p style="margin:24px 0">
+                <a href="%s" style="display:inline-block;padding:12px 28px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Reset Password</a>
+              </p>
+              <p style="font-size:13px;color:#555">This link expires in 15 minutes. If you didn't request a password reset, you can safely ignore this email.</p>
+              <p style="font-size:12px;color:#888;margin-top:16px">Or copy this link: <a href="%s" style="color:#555">%s</a></p>
+            </div>
+            """.formatted(resetLink, resetLink, resetLink);
+    }
+
     private String buildBody(String otp, int expiryMinutes) {
         return """
             <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#222">

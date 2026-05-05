@@ -15,4 +15,6 @@ public interface UserService {
     List<UserResponse> getUsersByOrganisation(Long organisationId);
     UserResponse toggleOnlineStatus(Long userId);
     void softDeleteUser(Long userId);
+    void forgotPassword(String email);
+    void resetPassword(String token, String newPassword);
 }
