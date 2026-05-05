@@ -12,9 +12,12 @@ import com.carpooling.entity.Organisation;
 import com.carpooling.entity.User;
 import com.carpooling.repository.OrganisationRepository;
 import com.carpooling.repository.UserRepository;
+import com.carpooling.service.EmailService;
 import com.carpooling.service.EmailVerificationService;
 import com.carpooling.service.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,7 +27,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class UserServiceImpl implements UserService, UserDetailsService {
@@ -35,19 +41,28 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final EmailVerificationService emailVerificationService;
+    private final EmailService emailService;
+
+    @Value("${app.base-url:http://localhost:5173}")
+    private String baseUrl;
+
+    private record ResetEntry(String email, Instant expiry) {}
+    private final ConcurrentHashMap<String, ResetEntry> resetTokens = new ConcurrentHashMap<>();
 
     public UserServiceImpl(UserRepository userRepository,
                            OrganisationRepository organisationRepository,
                            PasswordEncoder passwordEncoder,
                            JwtUtil jwtUtil,
                            @Lazy AuthenticationManager authenticationManager,
-                           EmailVerificationService emailVerificationService) {
+                           EmailVerificationService emailVerificationService,
+                           EmailService emailService) {
         this.userRepository = userRepository;
         this.organisationRepository = organisationRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
         this.emailVerificationService = emailVerificationService;
+        this.emailService = emailService;
     }
 
     @Override
@@ -160,6 +175,38 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setIsDeleted(true);
         user.setIsOnline(false);
         userRepository.save(user);
+    }
+
+    @Override
+    public void forgotPassword(String email) {
+        String normalized = email == null ? "" : email.trim().toLowerCase();
+        if (!userRepository.existsByEmail(normalized)) {
+            throw new BusinessException("No account found with that email address", HttpStatus.NOT_FOUND);
+        }
+        // Invalidate any existing token for this email
+        resetTokens.entrySet().removeIf(e -> e.getValue().email().equals(normalized));
+
+        String token = UUID.randomUUID().toString();
+        resetTokens.put(token, new ResetEntry(normalized, Instant.now().plusSeconds(900)));
+
+        String resetLink = baseUrl + "/reset-password?token=" + token;
+        emailService.sendPasswordResetEmail(normalized, resetLink);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        ResetEntry entry = resetTokens.get(token);
+        if (entry == null || Instant.now().isAfter(entry.expiry())) {
+            resetTokens.remove(token);
+            throw new BusinessException("Reset link is invalid or has expired", HttpStatus.BAD_REQUEST);
+        }
+        User user = userRepository.findByEmailAndIsDeletedFalse(entry.email())
+                .orElseThrow(() -> new BusinessException("Account not found", HttpStatus.NOT_FOUND));
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        resetTokens.remove(token);
     }
 
     @Override

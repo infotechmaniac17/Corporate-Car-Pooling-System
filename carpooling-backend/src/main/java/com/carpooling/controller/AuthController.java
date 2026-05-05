@@ -1,8 +1,10 @@
 package com.carpooling.controller;
 
 import com.carpooling.common.ApiResponse;
+import com.carpooling.dto.request.ForgotPasswordRequest;
 import com.carpooling.dto.request.LoginRequest;
 import com.carpooling.dto.request.RegisterRequest;
+import com.carpooling.dto.request.ResetPasswordRequest;
 import com.carpooling.dto.request.SendOtpRequest;
 import com.carpooling.dto.request.VerifyOtpRequest;
 import com.carpooling.dto.response.AuthResponse;
@@ -50,5 +52,17 @@ public class AuthController {
             @RequestParam Long userId,
             @RequestParam String role) {
         return ResponseEntity.ok(ApiResponse.ok(userService.selectRole(userId, role)));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.ok("Password reset link sent to your email", null));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.ok("Password updated successfully", null));
     }
 }
