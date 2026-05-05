@@ -7,11 +7,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long> {
 
     List<RideSchedule> findByDriverIdAndStatus(Long driverId, ScheduleStatus status);
+
+    boolean existsByDriverIdAndStatusIn(Long driverId, Collection<ScheduleStatus> statuses);
+
+    boolean existsByDriverIdAndStatus(Long driverId, ScheduleStatus status);
 
     List<RideSchedule> findByStatus(ScheduleStatus status);
 

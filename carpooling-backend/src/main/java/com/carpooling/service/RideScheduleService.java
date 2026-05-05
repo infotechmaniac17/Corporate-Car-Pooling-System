@@ -1,5 +1,6 @@
 package com.carpooling.service;
 
+import com.carpooling.dto.request.CancelScheduleRequest;
 import com.carpooling.dto.request.CreateRideScheduleRequest;
 import com.carpooling.dto.response.RideScheduleResponse;
 import com.carpooling.enums.ScheduleStatus;
@@ -11,5 +12,5 @@ public interface RideScheduleService {
     RideScheduleResponse getSchedule(Long scheduleId);
     List<RideScheduleResponse> getDriverSchedules(Long driverId);
     RideScheduleResponse updateStatus(Long scheduleId, Long driverId, ScheduleStatus newStatus);
-    void cancelSchedule(Long scheduleId, Long driverId, String reason);
+    void cancelSchedule(Long scheduleId, Long driverId, CancelScheduleRequest request);
 }
