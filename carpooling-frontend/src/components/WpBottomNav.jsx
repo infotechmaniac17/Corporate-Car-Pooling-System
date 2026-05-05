@@ -1,14 +1,25 @@
 import React from 'react';
 import WpIcon from './WpIcon';
+import { useAuth } from '../context/AuthContext';
 
-const tabs = [
-  { id: 'home', label: 'Home', icon: 'home' },
-  { id: 'rides', label: 'Rides', icon: 'car' },
-  { id: 'chat', label: 'Chat', icon: 'message' },
-  { id: 'you', label: 'You', icon: 'user' },
+const RIDER_TABS = [
+  { id: 'home',     label: 'Home',     icon: 'home'    },
+  { id: 'rides',    label: 'Rides',    icon: 'search'  },
+  { id: 'payments', label: 'Pay',      icon: 'wallet'  },
+  { id: 'you',      label: 'You',      icon: 'user'    },
+];
+
+const DRIVER_TABS = [
+  { id: 'home',     label: 'Home',     icon: 'home'    },
+  { id: 'offer',    label: 'Offer',    icon: 'plus'    },
+  { id: 'my-rides', label: 'My rides', icon: 'car'     },
+  { id: 'inbox',    label: 'Requests', icon: 'bell'    },
+  { id: 'you',      label: 'You',      icon: 'user'    },
 ];
 
 export default function WpBottomNav({ active, onTap }) {
+  const { isDriver } = useAuth();
+  const tabs = isDriver ? DRIVER_TABS : RIDER_TABS;
   return (
     <nav
       style={{

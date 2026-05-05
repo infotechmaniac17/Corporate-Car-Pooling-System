@@ -722,6 +722,145 @@ function ReimbursementsPage() {
   );
 }
 
+const MOCK_USERS = [
+  { id: 'U001', name: 'Aarav Joshi',   email: 'aarav@acme.com',   role: 'PASSENGER', status: 'ACTIVE',    joined: 'Jan 2026', rides: 48 },
+  { id: 'U002', name: 'Priya Sharma',  email: 'priya@acme.com',   role: 'DRIVER',    status: 'ACTIVE',    joined: 'Dec 2025', rides: 132 },
+  { id: 'U003', name: 'Meera Nair',    email: 'meera@zomato.com', role: 'PASSENGER', status: 'ACTIVE',    joined: 'Feb 2026', rides: 24 },
+  { id: 'U004', name: 'Kiran Das',     email: 'kiran@acme.com',   role: 'DRIVER',    status: 'ACTIVE',    joined: 'Nov 2025', rides: 89 },
+  { id: 'U005', name: 'Sneha Patel',   email: 'sneha@zomato.com', role: 'DRIVER',    status: 'SUSPENDED', joined: 'Mar 2026', rides: 67 },
+  { id: 'U006', name: 'Rahul Gupta',   email: 'rahul@acme.com',   role: 'PASSENGER', status: 'ACTIVE',    joined: 'Jan 2026', rides: 35 },
+  { id: 'U007', name: 'Anita Mehta',   email: 'anita@zomato.com', role: 'PASSENGER', status: 'ACTIVE',    joined: 'Apr 2026', rides: 19 },
+  { id: 'U008', name: 'Vijay Kumar',   email: 'vijay@acme.com',   role: 'DRIVER',    status: 'ACTIVE',    joined: 'Oct 2025', rides: 104 },
+];
+
+const MOCK_KYC = [
+  { id: 'K001', name: 'Ravi Teja',    email: 'ravi@startup.in',  submitted: 'May 4, 2026', license: true, rc: true,  insurance: false, status: 'PENDING'  },
+  { id: 'K002', name: 'Divya Menon',  email: 'divya@acme.com',   submitted: 'May 3, 2026', license: true, rc: false, insurance: false, status: 'PENDING'  },
+  { id: 'K003', name: 'Arjun Mehta',  email: 'arjun@acme.com',   submitted: 'May 2, 2026', license: true, rc: true,  insurance: true,  status: 'APPROVED' },
+];
+
+function UsersPage() {
+  const [search, setSearch] = useState('');
+  const [users, setUsers] = useState(MOCK_USERS);
+  const filtered = users.filter(u =>
+    u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
+  );
+  const toggleSuspend = (id) => {
+    setUsers(us => us.map(u => u.id === id ? { ...u, status: u.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' } : u));
+  };
+  return (
+    <>
+      <PageHeader title="Users" sub={`${users.length} registered users`} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+        <StatCard label="Total users"   value={users.length}                                           change="All time"        changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"  size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Drivers"       value={users.filter(u=>u.role==='DRIVER').length}              change="Active"          changeUp iconBg="var(--voltage-100)" icon={<WpIcon name="car"    size={16} color="var(--voltage-700)" />} />
+        <StatCard label="Passengers"    value={users.filter(u=>u.role==='PASSENGER').length}           change="Active"          changeUp iconBg="var(--success-100)" icon={<WpIcon name="user"   size={16} color="var(--success-700)" />} />
+        <StatCard label="Suspended"     value={users.filter(u=>u.status==='SUSPENDED').length}         change="Review needed"           danger iconBg="var(--danger-100)"  icon={<WpIcon name="x"      size={16} color="var(--danger-600)"  />} />
+      </div>
+      <Card style={{ overflow: 'hidden' }}>
+        <CardHeader title="User directory" meta={`${filtered.length} showing`}>
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search name or email…"
+            style={{ padding: '7px 14px', borderRadius: 999, border: '1px solid var(--asphalt-200)', fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', width: 200 }}
+          />
+        </CardHeader>
+        <Table
+          cols={['User', 'Email', 'Role', 'Status', 'Joined', 'Rides', 'Action']}
+          rows={filtered}
+          renderRow={u => (<>
+            <TD>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <WpAvatar initials={u.name.split(' ').map(n=>n[0]).join('')} size={32} tone={u.role === 'DRIVER' ? 'ink' : 'asphalt'} />
+                <span style={{ fontWeight: 600 }}>{u.name}</span>
+              </div>
+            </TD>
+            <TD mono muted>{u.email}</TD>
+            <TD>
+              <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                background: u.role === 'DRIVER' ? 'var(--ink-50)' : 'var(--asphalt-100)',
+                color: u.role === 'DRIVER' ? 'var(--ink-700)' : 'var(--asphalt-600)' }}>
+                {u.role}
+              </span>
+            </TD>
+            <TD><StatusPill status={u.status} /></TD>
+            <TD mono muted>{u.joined}</TD>
+            <TD mono>{u.rides}</TD>
+            <td style={{ padding: '10px 16px' }}>
+              <button
+                onClick={() => toggleSuspend(u.id)}
+                style={{ padding: '5px 12px', borderRadius: 999, border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  background: u.status === 'SUSPENDED' ? 'var(--success-500)' : 'var(--danger-500)', color: '#fff' }}
+              >
+                {u.status === 'SUSPENDED' ? 'Reinstate' : 'Suspend'}
+              </button>
+            </td>
+          </>)}
+        />
+      </Card>
+    </>
+  );
+}
+
+function DriverKycPage() {
+  const [kyc, setKyc] = useState(MOCK_KYC);
+  const pending = kyc.filter(k => k.status === 'PENDING');
+  const approved = kyc.filter(k => k.status === 'APPROVED');
+  const approve = id => setKyc(ks => ks.map(k => k.id === id ? { ...k, status: 'APPROVED' } : k));
+  const reject = id => setKyc(ks => ks.map(k => k.id === id ? { ...k, status: 'REJECTED' } : k));
+
+  const DocBadge = ({ label, uploaded }) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+      background: uploaded ? 'var(--success-100)' : 'var(--asphalt-100)',
+      color: uploaded ? 'var(--success-700)' : 'var(--asphalt-400)' }}>
+      <WpIcon name={uploaded ? 'check' : 'x'} size={11} color={uploaded ? 'var(--success-700)' : 'var(--asphalt-400)'} />
+      {label}
+    </span>
+  );
+
+  return (
+    <>
+      <PageHeader title="Driver KYC" sub="Verify driving licenses and vehicle documents" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+        <StatCard label="Pending review" value={pending.length}  change="Requires action"    danger={pending.length > 0} iconBg="var(--warning-100)" icon={<WpIcon name="clock"   size={16} color="var(--warning-700)" />} />
+        <StatCard label="Approved"       value={approved.length} change="Verified drivers"   changeUp iconBg="var(--success-100)" icon={<WpIcon name="check"   size={16} color="var(--success-700)" />} />
+        <StatCard label="Total submitted" value={kyc.length}     change="All applications"  changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"   size={16} color="var(--ink-600)"     />} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {kyc.map(k => (
+          <Card key={k.id} style={{ padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <WpAvatar initials={k.name.split(' ').map(n=>n[0]).join('')} size={40} tone="ink" />
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)' }}>{k.name}</div>
+                  <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-400)', marginTop: 2 }}>{k.email} · submitted {k.submitted}</div>
+                </div>
+              </div>
+              <StatusPill status={k.status} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <DocBadge label="License" uploaded={k.license} />
+              <DocBadge label="RC book" uploaded={k.rc} />
+              <DocBadge label="Insurance" uploaded={k.insurance} />
+            </div>
+            {k.status === 'PENDING' && (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => approve(k.id)} style={{ padding: '8px 20px', borderRadius: 999, background: 'var(--success-500)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  Approve
+                </button>
+                <button onClick={() => reject(k.id)} style={{ padding: '8px 20px', borderRadius: 999, background: 'var(--asphalt-100)', color: 'var(--asphalt-700)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Reject
+                </button>
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </>
+  );
+}
+
 // ─── Sidebar nav config ───────────────────────────────────────────────────────
 
 const NAV_SECTIONS = [
@@ -738,6 +877,8 @@ const NAV_SECTIONS = [
   {
     label: 'People',
     items: [
+      { id: 'users',     label: 'Users',           badge: '8' },
+      { id: 'kyc',       label: 'Driver KYC',      badge: '3', danger: true },
       { id: 'employees', label: 'Employees' },
       { id: 'vehicles',  label: 'Vehicles' },
       { id: 'ratings',   label: 'Ratings' },
@@ -775,6 +916,8 @@ export default function AdminDashboard() {
       case 'safety':          return <SafetyPage />;
       case 'backup':          return <BackupDriversPage />;
       case 'routes':          return <RoutesPage />;
+      case 'users':           return <UsersPage />;
+      case 'kyc':             return <DriverKycPage />;
       case 'employees':       return <EmployeesPage />;
       case 'vehicles':        return <VehiclesPage />;
       case 'ratings':         return <RatingsPage />;

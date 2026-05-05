@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
     }
   });
   const [token, setToken] = useState(() => localStorage.getItem('wp_token') || null);
+  const [pendingRoleSelection, setPendingRoleSelection] = useState(null); // { userId, email }
 
   const isAuthenticated = !!token && !!currentUser;
   const isDriver = currentUser?.role === 'DRIVER';
@@ -20,7 +21,13 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password);
-    const { token: jwt, userId, email: userEmail, role } = res.data.data;
+    const { token: jwt, userId, email: userEmail, role, requiresRoleSelection } = res.data.data;
+
+    if (requiresRoleSelection) {
+      setPendingRoleSelection({ userId, email: userEmail });
+      return { requiresRoleSelection: true };
+    }
+
     const user = { id: userId, email: userEmail, role };
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));
@@ -28,6 +35,19 @@ export function AuthProvider({ children }) {
     setCurrentUser(user);
     return user;
   }, []);
+
+  const confirmRole = useCallback(async (selectedRole) => {
+    if (!pendingRoleSelection) return;
+    const res = await authApi.selectRole(pendingRoleSelection.userId, selectedRole);
+    const { token: jwt, userId, email: userEmail, role } = res.data.data;
+    const user = { id: userId, email: userEmail, role };
+    localStorage.setItem('wp_token', jwt);
+    localStorage.setItem('wp_user', JSON.stringify(user));
+    setToken(jwt);
+    setCurrentUser(user);
+    setPendingRoleSelection(null);
+    return user;
+  }, [pendingRoleSelection]);
 
   const register = useCallback(async (data) => {
     const res = await authApi.register(data);
@@ -45,10 +65,11 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('wp_user');
     setToken(null);
     setCurrentUser(null);
+    setPendingRoleSelection(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, token, isAuthenticated, isDriver, isAdmin, login, logout, register }}>
+    <AuthContext.Provider value={{ currentUser, token, isAuthenticated, isDriver, isAdmin, pendingRoleSelection, login, confirmRole, logout, register }}>
       {children}
     </AuthContext.Provider>
   );
