@@ -15,6 +15,7 @@ import com.carpooling.repository.RideRequestRepository;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.UserRepository;
 import com.carpooling.service.RideRequestService;
+import com.carpooling.service.UserActivityService;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -34,6 +35,7 @@ public class RideRequestServiceImpl implements RideRequestService {
     private final RideScheduleRepository rideScheduleRepository;
     private final UserRepository userRepository;
     private final RidePassengerRepository ridePassengerRepository;
+    private final UserActivityService userActivityService;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -44,6 +46,8 @@ public class RideRequestServiceImpl implements RideRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("RideSchedule", dto.getRideScheduleId()));
         User passenger = userRepository.findById(passengerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", passengerId));
+
+        userActivityService.assertNoActiveSchedule(passengerId);
 
         if (schedule.getStatus() != ScheduleStatus.CREATED) {
             throw new BusinessException("Ride is not accepting requests");

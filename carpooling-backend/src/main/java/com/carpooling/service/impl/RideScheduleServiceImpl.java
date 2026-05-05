@@ -2,6 +2,7 @@ package com.carpooling.service.impl;
 
 import com.carpooling.common.exception.BusinessException;
 import com.carpooling.common.exception.ResourceNotFoundException;
+import com.carpooling.dto.request.CancelScheduleRequest;
 import com.carpooling.dto.request.CreateRideScheduleRequest;
 import com.carpooling.dto.response.RideScheduleResponse;
 import com.carpooling.entity.RideSchedule;
@@ -17,6 +18,7 @@ import com.carpooling.repository.RouteRepository;
 import com.carpooling.repository.UserRepository;
 import com.carpooling.repository.VehicleRepository;
 import com.carpooling.service.RideScheduleService;
+import com.carpooling.service.UserActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     private final VehicleRepository vehicleRepository;
     private final RouteRepository routeRepository;
     private final RidePassengerRepository ridePassengerRepository;
+    private final UserActivityService userActivityService;
 
     @Override
     @Transactional
@@ -47,6 +50,8 @@ public class RideScheduleServiceImpl implements RideScheduleService {
         if (!vehicle.getDriver().getId().equals(driverId)) {
             throw new BusinessException("Vehicle does not belong to this driver", HttpStatus.FORBIDDEN);
         }
+
+        userActivityService.assertNoOpenRequest(driverId);
 
         RideSchedule schedule = RideSchedule.builder()
                 .driver(driver)
@@ -97,14 +102,18 @@ public class RideScheduleServiceImpl implements RideScheduleService {
 
     @Override
     @Transactional
-    public void cancelSchedule(Long scheduleId, Long driverId, String reason) {
+    public void cancelSchedule(Long scheduleId, Long driverId, CancelScheduleRequest req) {
         RideSchedule schedule = getScheduleOrThrow(scheduleId);
         validateOwnership(schedule, driverId);
         if (schedule.getStatus() == ScheduleStatus.COMPLETED) {
             throw new BusinessException("Cannot cancel completed ride");
         }
         schedule.setStatus(ScheduleStatus.CANCELLED);
-        schedule.setCancelReason(reason);
+        String reasonText = req.getReasonCode().name();
+        if (req.getNote() != null && !req.getNote().isBlank()) {
+            reasonText = reasonText + ": " + req.getNote().trim();
+        }
+        schedule.setCancelReason(reasonText);
         rideScheduleRepository.save(schedule);
 
         ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)

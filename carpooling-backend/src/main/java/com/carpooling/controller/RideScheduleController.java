@@ -3,6 +3,7 @@ package com.carpooling.controller;
 import com.carpooling.common.ApiResponse;
 import com.carpooling.common.exception.BusinessException;
 import com.carpooling.config.JwtUtil;
+import com.carpooling.dto.request.CancelScheduleRequest;
 import com.carpooling.dto.request.CreateRideScheduleRequest;
 import com.carpooling.dto.response.RideScheduleResponse;
 import com.carpooling.enums.ScheduleStatus;
@@ -65,10 +66,10 @@ public class RideScheduleController {
     @DeleteMapping("/{scheduleId}")
     public ResponseEntity<ApiResponse<Void>> cancelSchedule(
             @PathVariable Long scheduleId,
-            @RequestParam(required = false) String reason,
+            @Valid @RequestBody CancelScheduleRequest request,
             HttpServletRequest httpRequest) {
         Long driverId = extractUserId(httpRequest);
-        rideScheduleService.cancelSchedule(scheduleId, driverId, reason);
+        rideScheduleService.cancelSchedule(scheduleId, driverId, request);
         return ResponseEntity.ok(ApiResponse.ok("Schedule cancelled", null));
     }
 

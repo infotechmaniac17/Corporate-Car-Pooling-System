@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Collection;
 
 public interface RideRequestRepository extends JpaRepository<RideRequest, Long> {
 
@@ -17,6 +18,8 @@ public interface RideRequestRepository extends JpaRepository<RideRequest, Long> 
     List<RideRequest> findByRideScheduleIdAndStatus(Long rideScheduleId, RequestStatus status);
 
     boolean existsByRideScheduleIdAndPassengerId(Long rideScheduleId, Long passengerId);
+
+    boolean existsByPassengerIdAndStatusIn(Long passengerId, Collection<RequestStatus> statuses);
 
     @Query("SELECT COUNT(r) FROM RideRequest r WHERE r.rideSchedule.id = :rideId AND r.status = 'ACCEPTED'")
     long countAcceptedByRideId(@Param("rideId") Long rideId);
