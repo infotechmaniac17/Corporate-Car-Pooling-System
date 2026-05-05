@@ -41,22 +41,78 @@ const labelStyle = {
 };
 
 
+function RoleSelectionModal({ onSelect }) {
+  const options = [
+    {
+      role: 'PASSENGER',
+      label: 'Passenger',
+      description: 'Book rides to and from work',
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+        </svg>
+      ),
+    },
+    {
+      role: 'DRIVER',
+      label: 'Driver',
+      description: 'Offer rides and earn credits',
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="9" width="22" height="9" rx="2" /><path d="M16 18v2M8 18v2M3 9l3-5h12l3 5" /><circle cx="7.5" cy="14.5" r="1.5" /><circle cx="16.5" cy="14.5" r="1.5" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(7,10,38,0.6)', backdropFilter: 'blur(4px)', padding: 24 }}>
+      <div style={{ background: '#fff', borderRadius: 20, padding: '40px 36px', width: '100%', maxWidth: 420, boxShadow: '0 32px 80px rgba(7,10,38,0.4)' }}>
+        <h2 style={{ font: '700 22px/1.2 var(--font-sans)', color: 'var(--asphalt-900)', marginBottom: 6 }}>How are you commuting today?</h2>
+        <p style={{ font: '500 14px var(--font-sans)', color: 'var(--asphalt-500)', marginBottom: 28 }}>Select your role for this session.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {options.map(({ role, label, description, icon }) => (
+            <button
+              key={role}
+              onClick={() => onSelect(role)}
+              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', borderRadius: 14, border: '2px solid var(--asphalt-200)', background: 'var(--asphalt-50)', cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.15s, background 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-500)'; e.currentTarget.style.background = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--asphalt-200)'; e.currentTarget.style.background = 'var(--asphalt-50)'; }}
+            >
+              <div style={{ color: 'var(--ink-600)', flexShrink: 0 }}>{icon}</div>
+              <div>
+                <div style={{ font: '700 15px var(--font-sans)', color: 'var(--asphalt-900)' }}>{label}</div>
+                <div style={{ font: '500 13px var(--font-sans)', color: 'var(--asphalt-500)', marginTop: 2 }}>{description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function WebLogin() {
-  const { login } = useAuth();
+  const { login, confirmRole } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const user = await login(email, password);
-      navigate(user.role === 'ADMIN' ? '/admin' : '/home', { replace: true });
+      const result = await login(email, password);
+      if (result?.requiresRoleSelection) {
+        setShowRoleModal(true);
+      } else {
+        navigate(result.role === 'ADMIN' ? '/admin' : '/home', { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Invalid credentials');
     } finally {
@@ -64,8 +120,21 @@ export default function WebLogin() {
     }
   }
 
+  async function handleRoleSelect(role) {
+    try {
+      const user = await confirmRole(role);
+      setShowRoleModal(false);
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setError('Role selection failed. Please try again.');
+      setShowRoleModal(false);
+    }
+  }
+
   if (isDesktop) {
     return (
+      <>
+      {showRoleModal && <RoleSelectionModal onSelect={handleRoleSelect} />}
       <div style={{
         minHeight: '100vh',
         background: 'var(--ink-950)',
@@ -168,11 +237,14 @@ export default function WebLogin() {
           </p>
         </div>
       </div>
+      </>
     );
   }
 
   /* ── Mobile layout ─────────────────────────────────────────────────────── */
   return (
+    <>
+    {showRoleModal && <RoleSelectionModal onSelect={handleRoleSelect} />}
     <div style={{ minHeight: '100vh', background: 'var(--asphalt-0)', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
       {/* Dark header */}
       <div style={{ background: 'var(--ink-950)', padding: '60px 24px 32px', position: 'relative', overflow: 'hidden' }}>
@@ -252,5 +324,6 @@ export default function WebLogin() {
         </p>
       </div>
     </div>
+    </>
   );
 }

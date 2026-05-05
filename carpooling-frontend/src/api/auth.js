@@ -17,3 +17,6 @@ export const forgotPassword = (email) =>
 
 export const resetPassword = (token, newPassword) =>
   api.post('/auth/reset-password', { token, newPassword });
+
+export const selectRole = (userId, role) =>
+  api.post(`/auth/select-role?userId=${userId}&role=${role}`);

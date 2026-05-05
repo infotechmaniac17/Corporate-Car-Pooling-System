@@ -5,17 +5,19 @@ import WpIcon from './WpIcon';
 import WpAvatar from './WpAvatar';
 
 const RIDER_NAV = [
-  { id: 'home',  label: 'Home',       icon: 'home',    path: '/home' },
-  { id: 'match', label: 'Find a ride', icon: 'search',  path: '/match' },
-  { id: 'chat',  label: 'Chat',        icon: 'message', path: '/chat' },
-  { id: 'you',   label: 'Profile',     icon: 'user',    path: '/profile' },
+  { id: 'home',     label: 'Home',       icon: 'home',    path: '/home' },
+  { id: 'match',    label: 'Find a ride', icon: 'search',  path: '/match' },
+  { id: 'payments', label: 'Payments',    icon: 'wallet',  path: '/payments' },
+  { id: 'profile',  label: 'Profile',     icon: 'user',    path: '/profile' },
 ];
 
 const DRIVER_NAV = [
-  { id: 'home',  label: 'Home',     icon: 'home',    path: '/home' },
-  { id: 'inbox', label: 'Requests', icon: 'bell',    path: '/driver/inbox' },
-  { id: 'chat',  label: 'Chat',     icon: 'message', path: '/chat' },
-  { id: 'you',   label: 'Profile',  icon: 'user',    path: '/profile' },
+  { id: 'home',       label: 'Home',       icon: 'home',        path: '/home' },
+  { id: 'offer',      label: 'Offer ride', icon: 'plus',        path: '/driver/offer-ride' },
+  { id: 'my-rides',   label: 'My rides',   icon: 'car',         path: '/driver/my-rides' },
+  { id: 'inbox',      label: 'Requests',   icon: 'bell',        path: '/driver/inbox' },
+  { id: 'vehicles',   label: 'Vehicles',   icon: 'settings',    path: '/driver/vehicles' },
+  { id: 'profile',    label: 'Profile',    icon: 'user',        path: '/profile' },
 ];
 
 export default function AppShell({ children }) {

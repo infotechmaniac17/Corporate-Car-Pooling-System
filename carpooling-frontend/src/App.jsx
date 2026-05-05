@@ -12,6 +12,11 @@ import TrackingScreen from './screens/TrackingScreen';
 import ChatScreen from './screens/ChatScreen';
 import SosScreen from './screens/SosScreen';
 import DriverInboxScreen from './screens/DriverInboxScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import PaymentsScreen from './screens/PaymentsScreen';
+import DriverOfferRideScreen from './screens/DriverOfferRideScreen';
+import DriverMyRidesScreen from './screens/DriverMyRidesScreen';
+import DriverVehiclesScreen from './screens/DriverVehiclesScreen';
 import AdminDashboard from './admin/AdminDashboard';
 import WebLogin from './admin/WebLogin';
 import AppShell from './components/AppShell';
@@ -115,8 +120,13 @@ export default function App() {
       <Route path="/tracking/:rideId" element={<UserRoute><TrackingWrapper /></UserRoute>} />
       <Route path="/chat/:rideId"     element={<UserRoute><ChatWrapper /></UserRoute>} />
       <Route path="/sos/:rideId"      element={<UserRoute><SosWrapper /></UserRoute>} />
-      <Route path="/driver/inbox"     element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
-      <Route path="/driver/inbox/:rideId" element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
+      <Route path="/driver/inbox"              element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
+      <Route path="/driver/inbox/:rideId"      element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
+      <Route path="/driver/offer-ride"         element={<UserRoute driverOnly><DriverOfferRideScreen /></UserRoute>} />
+      <Route path="/driver/my-rides"           element={<UserRoute driverOnly><DriverMyRidesScreen /></UserRoute>} />
+      <Route path="/driver/vehicles"           element={<UserRoute driverOnly><DriverVehiclesScreen /></UserRoute>} />
+      <Route path="/profile"                   element={<UserRoute><ProfileScreen /></UserRoute>} />
+      <Route path="/payments"                  element={<UserRoute><PaymentsScreen /></UserRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

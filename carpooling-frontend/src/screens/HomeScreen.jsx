@@ -86,8 +86,12 @@ export default function HomeScreen() {
   const handleTabTap = (t) => {
     setTab(t);
     if (t === 'rides') navigate('/match');
+    if (t === 'offer') navigate('/driver/offer-ride');
+    if (t === 'my-rides') navigate('/driver/my-rides');
+    if (t === 'inbox') navigate('/driver/inbox');
+    if (t === 'payments') navigate('/payments');
     if (t === 'chat') currentUser?.activeRideId && navigate(`/chat/${currentUser.activeRideId}`);
-    if (t === 'you') navigate('/login');
+    if (t === 'you') navigate('/profile');
   };
 
   const CommuteCard = () => (
