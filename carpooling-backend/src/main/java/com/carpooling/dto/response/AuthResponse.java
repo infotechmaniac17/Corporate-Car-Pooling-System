@@ -11,6 +11,8 @@ public class AuthResponse {
     private String email;
     private String role;
     private boolean requiresRoleSelection;
+    private String driverStatus;
+    private String passengerStatus;
 
     public AuthResponse(String token, Long userId, String email, String role) {
         this.token = token;
@@ -18,5 +20,16 @@ public class AuthResponse {
         this.email = email;
         this.role = role;
         this.requiresRoleSelection = false;
+    }
+
+    public AuthResponse(String token, Long userId, String email, String role,
+                        String driverStatus, String passengerStatus) {
+        this.token = token;
+        this.userId = userId;
+        this.email = email;
+        this.role = role;
+        this.requiresRoleSelection = false;
+        this.driverStatus = driverStatus;
+        this.passengerStatus = passengerStatus;
     }
 }

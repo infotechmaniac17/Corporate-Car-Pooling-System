@@ -1,6 +1,8 @@
 package com.carpooling.service.impl;
 
 import com.carpooling.common.exception.BusinessException;
+import com.carpooling.entity.RoleRequest;
+import com.carpooling.entity.User;
 import com.carpooling.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
@@ -47,6 +49,65 @@ public class EmailServiceImpl implements EmailService {
             log.error("Failed to send OTP email to {}: {}", to, ex.getMessage(), ex);
             throw new BusinessException("Could not send verification email. Please try again later.", HttpStatus.SERVICE_UNAVAILABLE);
         }
+    }
+
+    @Override
+    public void sendDriverApproval(User user, User admin, RoleRequest request) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setTo(user.getEmail());
+            helper.setCc(admin.getEmail());
+            helper.setSubject("Your driver verification has been approved – Waypoint");
+            helper.setText(buildApprovalBody(user.getName(), request.getVehiclePlate()), true);
+            mailSender.send(message);
+            log.info("Driver approval email sent to {}", user.getEmail());
+        } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
+            log.error("Failed to send approval email to {}: {}", user.getEmail(), ex.getMessage());
+        }
+    }
+
+    @Override
+    public void sendDriverRejection(User user, User admin, RoleRequest request, String reason) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setTo(user.getEmail());
+            helper.setCc(admin.getEmail());
+            helper.setSubject("Driver verification update – Waypoint");
+            helper.setText(buildRejectionBody(user.getName(), request.getVehiclePlate(), reason), true);
+            mailSender.send(message);
+            log.info("Driver rejection email sent to {}", user.getEmail());
+        } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
+            log.error("Failed to send rejection email to {}: {}", user.getEmail(), ex.getMessage());
+        }
+    }
+
+    private String buildApprovalBody(String name, String plate) {
+        return """
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#222">
+              <h2 style="margin:0 0 12px">Driver verification approved</h2>
+              <p>Hi %s,</p>
+              <p>Your driver application for vehicle <strong>%s</strong> has been approved.</p>
+              <p>You can now log in to Waypoint and start offering rides to your colleagues.</p>
+              <p style="font-size:13px;color:#555;margin-top:24px">— The Waypoint Team</p>
+            </div>
+            """.formatted(name, plate);
+    }
+
+    private String buildRejectionBody(String name, String plate, String reason) {
+        return """
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#222">
+              <h2 style="margin:0 0 12px">Driver verification update</h2>
+              <p>Hi %s,</p>
+              <p>Your application for vehicle <strong>%s</strong> was not approved at this time.</p>
+              <p><strong>Reason:</strong> %s</p>
+              <p>You may resubmit with corrected documents. Your rider access is unaffected.</p>
+              <p style="font-size:13px;color:#555;margin-top:24px">— The Waypoint Team</p>
+            </div>
+            """.formatted(name, plate, reason != null ? reason : "See admin note");
     }
 
     private String buildBody(String otp, int expiryMinutes) {

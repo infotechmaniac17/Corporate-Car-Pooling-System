@@ -20,11 +20,12 @@ import DriverVehiclesScreen from './screens/DriverVehiclesScreen';
 import AdminDashboard from './admin/AdminDashboard';
 import WebLogin from './admin/WebLogin';
 import AppShell from './components/AppShell';
+import PendingApprovalScreen from './screens/PendingApprovalScreen';
 
 // ─── Guards ───────────────────────────────────────────────────────────────────
 
 function RootRedirect() {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isPendingDriver } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
 
@@ -38,7 +39,7 @@ function RootRedirect() {
       </div>
     );
   }
-  return <Navigate to={isAdmin ? '/admin' : '/home'} replace />;
+  return <Navigate to={isAdmin ? '/admin' : isPendingDriver ? '/pending-approval' : '/home'} replace />;
 }
 
 // Rider / driver routes — desktop: AppShell sidebar; mobile: device-frame
@@ -127,6 +128,7 @@ export default function App() {
       <Route path="/driver/vehicles"           element={<UserRoute driverOnly><DriverVehiclesScreen /></UserRoute>} />
       <Route path="/profile"                   element={<UserRoute><ProfileScreen /></UserRoute>} />
       <Route path="/payments"                  element={<UserRoute><PaymentsScreen /></UserRoute>} />
+      <Route path="/pending-approval"          element={<UserRoute><PendingApprovalScreen /></UserRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

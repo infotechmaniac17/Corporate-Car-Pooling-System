@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Corporate Carpooling System — PostgreSQL 16 + PostGIS — COMPLETE SCHEMA
--- Combines: schema.sql + migration_v2.sql + migration_v3.sql
--- Generated: 2026-05-03
+-- Combines: schema.sql + migration_v2.sql + migration_v3.sql + migration_v4.sql
+-- Generated: 2026-05-05
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -13,11 +13,12 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- ---------------------------------------------------------------------------
 -- ENUM Types
 -- ---------------------------------------------------------------------------
-CREATE TYPE user_role       AS ENUM ('DRIVER', 'PASSENGER', 'BOTH', 'ADMIN');
-CREATE TYPE schedule_status AS ENUM ('CREATED', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'STARTED');
-CREATE TYPE request_status  AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED');
-CREATE TYPE txn_status      AS ENUM ('INITIATED', 'SUCCESS', 'FAILED', 'REFUNDED');
-CREATE TYPE passenger_status AS ENUM ('ACTIVE', 'CANCELLED', 'COMPLETED');
+CREATE TYPE user_role           AS ENUM ('DRIVER', 'PASSENGER', 'BOTH', 'ADMIN');
+CREATE TYPE schedule_status     AS ENUM ('CREATED', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'STARTED');
+CREATE TYPE request_status      AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED');
+CREATE TYPE txn_status          AS ENUM ('INITIATED', 'SUCCESS', 'FAILED', 'REFUNDED');
+CREATE TYPE passenger_status    AS ENUM ('ACTIVE', 'CANCELLED', 'COMPLETED');
+CREATE TYPE verification_status AS ENUM ('NONE', 'PENDING', 'APPROVED', 'REJECTED');
 
 
 -- ---------------------------------------------------------------------------
@@ -51,6 +52,8 @@ CREATE TABLE users (
     is_online       BOOLEAN        NOT NULL DEFAULT FALSE,
     is_deleted      BOOLEAN        NOT NULL DEFAULT FALSE,
     is_read         BOOLEAN        NOT NULL DEFAULT FALSE,
+    driver_status   verification_status NOT NULL DEFAULT 'NONE',
+    passenger_status verification_status NOT NULL DEFAULT 'NONE',
     created_at      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ    NOT NULL DEFAULT NOW()
 );
@@ -309,6 +312,46 @@ CREATE TABLE ratings (
 COMMENT ON TABLE ratings IS 'Mutual ratings between drivers and passengers after a ride';
 CREATE INDEX idx_ratings_given_by ON ratings(given_by);
 CREATE INDEX idx_ratings_given_to ON ratings(given_to);
+
+
+-- ---------------------------------------------------------------------------
+-- role_requests (driver KYC — migration_v4)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE role_requests (
+    id                   BIGSERIAL PRIMARY KEY,
+    user_id              BIGINT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vehicle_plate        VARCHAR(20)   NOT NULL,
+    vehicle_model        VARCHAR(100)  NOT NULL,
+    vehicle_type         VARCHAR(30)   NOT NULL,
+    vehicle_fuel         VARCHAR(20)   NOT NULL,
+    vehicle_seats        SMALLINT      NOT NULL,
+    license_number       VARCHAR(50)   NOT NULL,
+    license_expiry       DATE          NOT NULL,
+    license_doc_url      VARCHAR(500)  NOT NULL,
+    id_proof_type        VARCHAR(30)   NOT NULL,
+    id_proof_number      VARCHAR(50)   NOT NULL,
+    id_proof_doc_url     VARCHAR(500)  NOT NULL,
+    rc_number            VARCHAR(50)   NOT NULL,
+    rc_doc_url           VARCHAR(500)  NOT NULL,
+    insurance_number     VARCHAR(50)   NOT NULL,
+    insurance_expiry     DATE          NOT NULL,
+    insurance_doc_url    VARCHAR(500)  NOT NULL,
+    status               verification_status NOT NULL DEFAULT 'PENDING',
+    admin_id             BIGINT        REFERENCES users(id),
+    admin_note           TEXT,
+    submitted_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    decided_at           TIMESTAMPTZ
+);
+
+COMMENT ON TABLE role_requests IS 'Driver KYC submissions awaiting admin approval';
+CREATE INDEX idx_role_requests_user_id ON role_requests(user_id);
+CREATE INDEX idx_role_requests_status  ON role_requests(status);
+
+-- One PENDING request per (user, vehicle)
+CREATE UNIQUE INDEX uniq_pending_vehicle
+    ON role_requests(user_id, vehicle_plate)
+    WHERE status = 'PENDING';
 
 
 -- =============================================================================

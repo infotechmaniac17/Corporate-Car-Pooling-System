@@ -16,19 +16,20 @@ export function AuthProvider({ children }) {
   const [pendingRoleSelection, setPendingRoleSelection] = useState(null); // { userId, email }
 
   const isAuthenticated = !!token && !!currentUser;
-  const isDriver = currentUser?.role === 'DRIVER';
+  const isDriver = currentUser?.role === 'DRIVER' || currentUser?.role === 'BOTH';
   const isAdmin = currentUser?.role === 'ADMIN';
+  const isPendingDriver = currentUser?.driverStatus === 'PENDING';
 
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password);
-    const { token: jwt, userId, email: userEmail, role, requiresRoleSelection } = res.data.data;
+    const { token: jwt, userId, email: userEmail, role, requiresRoleSelection, driverStatus, passengerStatus } = res.data.data;
 
     if (requiresRoleSelection) {
       setPendingRoleSelection({ userId, email: userEmail });
       return { requiresRoleSelection: true };
     }
 
-    const user = { id: userId, email: userEmail, role };
+    const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));
     setToken(jwt);
@@ -51,8 +52,8 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (data) => {
     const res = await authApi.register(data);
-    const { token: jwt, userId, email: userEmail, role } = res.data.data;
-    const user = { id: userId, email: userEmail, role };
+    const { token: jwt, userId, email: userEmail, role, driverStatus, passengerStatus } = res.data.data;
+    const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));
     setToken(jwt);
@@ -69,7 +70,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, token, isAuthenticated, isDriver, isAdmin, pendingRoleSelection, login, confirmRole, logout, register }}>
+    <AuthContext.Provider value={{ currentUser, token, isAuthenticated, isDriver, isAdmin, isPendingDriver, pendingRoleSelection, login, confirmRole, logout, register }}>
       {children}
     </AuthContext.Provider>
   );

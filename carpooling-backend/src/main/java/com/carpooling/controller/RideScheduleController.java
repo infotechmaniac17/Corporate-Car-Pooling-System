@@ -1,10 +1,13 @@
 package com.carpooling.controller;
 
 import com.carpooling.common.ApiResponse;
+import com.carpooling.common.exception.BusinessException;
 import com.carpooling.config.JwtUtil;
 import com.carpooling.dto.request.CreateRideScheduleRequest;
 import com.carpooling.dto.response.RideScheduleResponse;
 import com.carpooling.enums.ScheduleStatus;
+import com.carpooling.enums.VerificationStatus;
+import com.carpooling.repository.UserRepository;
 import com.carpooling.service.RideScheduleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -22,12 +25,18 @@ public class RideScheduleController {
 
     private final RideScheduleService rideScheduleService;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<ApiResponse<RideScheduleResponse>> createSchedule(
             @Valid @RequestBody CreateRideScheduleRequest request,
             HttpServletRequest httpRequest) {
         Long driverId = extractUserId(httpRequest);
+        userRepository.findById(driverId).ifPresent(user -> {
+            if (user.getDriverStatus() != VerificationStatus.APPROVED) {
+                throw new BusinessException("Driver verification is pending or not approved");
+            }
+        });
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(rideScheduleService.createSchedule(driverId, request)));
     }
