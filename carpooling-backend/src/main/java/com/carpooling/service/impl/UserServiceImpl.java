@@ -63,21 +63,28 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         Organisation org = organisationRepository.findById(request.getOrganisationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Organisation", request.getOrganisationId()));
 
+        boolean registeringAsDriver = request.getRole() == com.carpooling.enums.UserRole.DRIVER;
+
         User user = User.builder()
                 .name(request.getName().trim())
                 .email(email)
                 .phone(request.getPhone().trim())
                 .gender(request.getGender())
-                .role(request.getRole())
+                .role(com.carpooling.enums.UserRole.PASSENGER)
                 .organisation(org)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .driverStatus(registeringAsDriver
+                        ? com.carpooling.enums.VerificationStatus.PENDING
+                        : com.carpooling.enums.VerificationStatus.NONE)
+                .passengerStatus(com.carpooling.enums.VerificationStatus.APPROVED)
                 .build();
         user = userRepository.save(user);
 
         emailVerificationService.consumeVerifiedOtp(email);
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name());
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name(),
+                user.getDriverStatus().name(), user.getPassengerStatus().name());
     }
 
     @Override
@@ -99,7 +106,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name());
+        AuthResponse response = new AuthResponse(token, user.getId(), user.getEmail(), user.getRole().name(),
+                user.getDriverStatus().name(), user.getPassengerStatus().name());
+        return response;
     }
 
     @Override
@@ -176,6 +185,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .organisationId(user.getOrganisation().getId())
                 .organisationName(user.getOrganisation().getName())
                 .isOnline(user.getIsOnline())
+                .driverStatus(user.getDriverStatus() != null ? user.getDriverStatus().name() : "NONE")
+                .passengerStatus(user.getPassengerStatus() != null ? user.getPassengerStatus().name() : "NONE")
                 .build();
     }
 }

@@ -17,4 +17,6 @@ public class UserResponse {
     private Long organisationId;
     private String organisationName;
     private Boolean isOnline;
+    private String driverStatus;
+    private String passengerStatus;
 }

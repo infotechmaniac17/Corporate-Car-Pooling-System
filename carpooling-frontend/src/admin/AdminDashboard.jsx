@@ -4,6 +4,7 @@ import WpIcon from '../components/WpIcon';
 import WpAvatar from '../components/WpAvatar';
 import WpPill from '../components/WpPill';
 import api from '../api/client';
+import { adminGetRoleRequests, adminApproveRequest, adminRejectRequest } from '../api/roleRequests';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -803,60 +804,116 @@ function UsersPage() {
 }
 
 function DriverKycPage() {
-  const [kyc, setKyc] = useState(MOCK_KYC);
-  const pending = kyc.filter(k => k.status === 'PENDING');
-  const approved = kyc.filter(k => k.status === 'APPROVED');
-  const approve = id => setKyc(ks => ks.map(k => k.id === id ? { ...k, status: 'APPROVED' } : k));
-  const reject = id => setKyc(ks => ks.map(k => k.id === id ? { ...k, status: 'REJECTED' } : k));
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
-  const DocBadge = ({ label, uploaded }) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600,
-      background: uploaded ? 'var(--success-100)' : 'var(--asphalt-100)',
-      color: uploaded ? 'var(--success-700)' : 'var(--asphalt-400)' }}>
-      <WpIcon name={uploaded ? 'check' : 'x'} size={11} color={uploaded ? 'var(--success-700)' : 'var(--asphalt-400)'} />
+  const load = () => {
+    setLoading(true);
+    adminGetRoleRequests('PENDING')
+      .then(res => setRequests(res.data?.data || []))
+      .catch(() => setRequests([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleApprove = (id) => {
+    adminApproveRequest(id).then(load).catch(() => {});
+  };
+
+  const handleReject = (id) => {
+    adminRejectRequest(id, rejectReason).then(() => {
+      setRejectingId(null);
+      setRejectReason('');
+      load();
+    }).catch(() => {});
+  };
+
+  const DocLink = ({ label, url }) => (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+        background: 'var(--success-100)', color: 'var(--success-700)', textDecoration: 'none' }}>
+      <WpIcon name="check" size={11} color="var(--success-700)" />
       {label}
-    </span>
+    </a>
   );
+
+  const pending = requests.filter(r => r.status === 'PENDING');
 
   return (
     <>
       <PageHeader title="Driver KYC" sub="Verify driving licenses and vehicle documents" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Pending review" value={pending.length}  change="Requires action"    danger={pending.length > 0} iconBg="var(--warning-100)" icon={<WpIcon name="clock"   size={16} color="var(--warning-700)" />} />
-        <StatCard label="Approved"       value={approved.length} change="Verified drivers"   changeUp iconBg="var(--success-100)" icon={<WpIcon name="check"   size={16} color="var(--success-700)" />} />
-        <StatCard label="Total submitted" value={kyc.length}     change="All applications"  changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"   size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Pending review"  value={pending.length} change="Requires action"   danger={pending.length > 0} iconBg="var(--warning-100)" icon={<WpIcon name="clock"  size={16} color="var(--warning-700)" />} />
+        <StatCard label="Total fetched"   value={requests.length} change="All applications" changeUp iconBg="var(--ink-50)" icon={<WpIcon name="users" size={16} color="var(--ink-600)" />} />
+        <StatCard label="Viewing"         value="PENDING"         change="Filter active"    changeUp iconBg="var(--asphalt-100)" icon={<WpIcon name="search" size={16} color="var(--asphalt-500)" />} />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {kyc.map(k => (
-          <Card key={k.id} style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <WpAvatar initials={k.name.split(' ').map(n=>n[0]).join('')} size={40} tone="ink" />
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)' }}>{k.name}</div>
-                  <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-400)', marginTop: 2 }}>{k.email} · submitted {k.submitted}</div>
+      {loading ? (
+        <Card style={{ padding: 40, textAlign: 'center' }}>
+          <div style={{ fontSize: 14, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>Loading…</div>
+        </Card>
+      ) : requests.length === 0 ? (
+        <Card style={{ padding: 40, textAlign: 'center' }}>
+          <WpIcon name="check" size={32} color="var(--success-700)" />
+          <div style={{ fontSize: 14, color: 'var(--asphalt-500)', marginTop: 12 }}>No pending applications</div>
+        </Card>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {requests.map(k => (
+            <Card key={k.id} style={{ padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <WpAvatar initials={(k.userName || 'U').split(' ').map(n=>n[0]).join('')} size={40} tone="ink" />
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)' }}>{k.userName}</div>
+                    <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-400)', marginTop: 2 }}>
+                      {k.userEmail} · {k.vehiclePlate} · {k.vehicleModel}
+                    </div>
+                  </div>
                 </div>
+                <StatusPill status={k.status} />
               </div>
-              <StatusPill status={k.status} />
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <DocBadge label="License" uploaded={k.license} />
-              <DocBadge label="RC book" uploaded={k.rc} />
-              <DocBadge label="Insurance" uploaded={k.insurance} />
-            </div>
-            {k.status === 'PENDING' && (
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => approve(k.id)} style={{ padding: '8px 20px', borderRadius: 999, background: 'var(--success-500)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                  Approve
-                </button>
-                <button onClick={() => reject(k.id)} style={{ padding: '8px 20px', borderRadius: 999, background: 'var(--asphalt-100)', color: 'var(--asphalt-700)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                  Reject
-                </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                <DocLink label="License" url={k.licenseDocUrl} />
+                <DocLink label="ID proof" url={k.idProofDocUrl} />
+                <DocLink label="RC book" url={k.rcDocUrl} />
+                <DocLink label="Insurance" url={k.insuranceDocUrl} />
               </div>
-            )}
-          </Card>
-        ))}
-      </div>
+              {k.status === 'PENDING' && rejectingId !== k.id && (
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => handleApprove(k.id)} style={{ padding: '8px 20px', borderRadius: 999, background: 'var(--success-500)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    Approve
+                  </button>
+                  <button onClick={() => { setRejectingId(k.id); setRejectReason(''); }} style={{ padding: '8px 20px', borderRadius: 999, background: 'var(--asphalt-100)', color: 'var(--asphalt-700)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    Reject
+                  </button>
+                </div>
+              )}
+              {rejectingId === k.id && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    value={rejectReason}
+                    onChange={e => setRejectReason(e.target.value)}
+                    placeholder="Reason for rejection…"
+                    style={{ flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--asphalt-300)', fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none' }}
+                  />
+                  <button onClick={() => handleReject(k.id)} style={{ padding: '8px 16px', borderRadius: 999, background: 'var(--danger-600)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    Confirm reject
+                  </button>
+                  <button onClick={() => setRejectingId(null)} style={{ padding: '8px 14px', borderRadius: 999, background: 'var(--asphalt-100)', color: 'var(--asphalt-700)', border: 'none', fontSize: 12, cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
     </>
   );
 }

@@ -6,6 +6,7 @@ import WpButton from '../components/WpButton';
 import WpIcon from '../components/WpIcon';
 import WpAvatar from '../components/WpAvatar';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { submitPassengerRequest } from '../api/roleRequests';
 
 function Field({ label, value, onChange, type = 'text', readOnly = false }) {
   return (
@@ -44,6 +45,8 @@ export default function ProfileScreen() {
     dropLocation: currentUser?.dropLocation || '',
   });
   const [saved, setSaved] = useState(false);
+  const [riderEnabled, setRiderEnabled] = useState(false);
+  const [riderLoading, setRiderLoading] = useState(false);
 
   const initials = (form.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const roleLabel = currentUser?.role === 'DRIVER' ? 'Driver' : currentUser?.role === 'BOTH' ? 'Rider & Driver' : 'Rider';
@@ -92,6 +95,52 @@ export default function ProfileScreen() {
       </div>
 
       <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--asphalt-100)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 14 }}>
+          Role access
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--asphalt-700)', fontFamily: 'var(--font-sans)' }}>Rider</span>
+            {currentUser?.passengerStatus === 'APPROVED' ? (
+              <span style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--success-100)', color: 'var(--success-700)', fontSize: 11, fontWeight: 700 }}>✓ Active</span>
+            ) : (
+              <span style={{ fontSize: 12, color: 'var(--asphalt-400)' }}>Not enabled</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--asphalt-700)', fontFamily: 'var(--font-sans)' }}>Driver</span>
+            {currentUser?.driverStatus === 'APPROVED' && (
+              <span style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--success-100)', color: 'var(--success-700)', fontSize: 11, fontWeight: 700 }}>✓ Verified</span>
+            )}
+            {currentUser?.driverStatus === 'PENDING' && (
+              <button onClick={() => navigate('/pending-approval')} style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--warning-100)', color: 'var(--warning-700)', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                Pending review →
+              </button>
+            )}
+            {(!currentUser?.driverStatus || currentUser?.driverStatus === 'NONE' || currentUser?.driverStatus === 'REJECTED') && (
+              <button onClick={() => navigate('/register')} style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--ink-50)', color: 'var(--ink-700)', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                Apply →
+              </button>
+            )}
+          </div>
+          {currentUser?.driverStatus === 'APPROVED' && currentUser?.passengerStatus !== 'APPROVED' && (
+            <WpButton
+              kind="secondary" size="sm"
+              onClick={() => {
+                setRiderLoading(true);
+                submitPassengerRequest()
+                  .then(() => setRiderEnabled(true))
+                  .finally(() => setRiderLoading(false));
+              }}
+              disabled={riderLoading || riderEnabled}
+            >
+              {riderEnabled ? '✓ Rider access enabled' : riderLoading ? 'Enabling…' : 'Enable rider mode'}
+            </WpButton>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--asphalt-100)' }}>
         <button
           onClick={logout}
           style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--danger-600)', fontFamily: 'var(--font-sans)', padding: 0 }}

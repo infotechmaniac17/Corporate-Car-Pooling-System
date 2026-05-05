@@ -1,6 +1,7 @@
 package com.carpooling.entity;
 
 import com.carpooling.enums.UserRole;
+import com.carpooling.enums.VerificationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -57,6 +58,18 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private Boolean isRead = false;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "driver_status", nullable = false, columnDefinition = "verification_status")
+    @Builder.Default
+    private VerificationStatus driverStatus = VerificationStatus.NONE;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "passenger_status", nullable = false, columnDefinition = "verification_status")
+    @Builder.Default
+    private VerificationStatus passengerStatus = VerificationStatus.NONE;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
