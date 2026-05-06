@@ -4,6 +4,8 @@ import com.carpooling.enums.PassengerStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -28,6 +30,7 @@ public class RidePassenger {
     private User passenger;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "passenger_status")
     @Builder.Default
     private PassengerStatus status = PassengerStatus.ACTIVE;

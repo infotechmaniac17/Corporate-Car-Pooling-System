@@ -82,12 +82,14 @@ com\carpooling\controller\RideScheduleController.class
 com\carpooling\dto\response\RidePassengerResponse$RidePassengerResponseBuilder.class
 com\carpooling\dto\response\SosIncidentResponse.class
 com\carpooling\entity\Transaction$TransactionBuilder.class
+com\carpooling\dto\response\UserActivityResponse.class
 com\carpooling\entity\BackupRide.class
 com\carpooling\entity\Route.class
 com\carpooling\dto\response\MatchedRideResponse$MatchedRideResponseBuilder.class
 com\carpooling\controller\VehicleController.class
 com\carpooling\entity\Vehicle.class
 com\carpooling\enums\ScheduleStatus.class
+com\carpooling\dto\request\CancelScheduleRequest.class
 com\carpooling\entity\RoleRequest$RoleRequestBuilder.class
 com\carpooling\dto\response\RideScheduleResponse$RideScheduleResponseBuilder.class
 com\carpooling\entity\Rating$RatingBuilder.class
@@ -98,6 +100,7 @@ com\carpooling\dto\request\RideRequestDto.class
 com\carpooling\entity\RouteWaypoint$RouteWaypointBuilder.class
 com\carpooling\service\impl\UserServiceImpl$ResetEntry.class
 com\carpooling\entity\Organisation.class
+com\carpooling\service\UserActivityService.class
 com\carpooling\dto\request\TriggerSosRequest.class
 com\carpooling\controller\AdminRoleRequestController.class
 com\carpooling\enums\TxnStatus.class
@@ -124,9 +127,11 @@ com\carpooling\enums\GenderPreference.class
 com\carpooling\service\impl\BackupDriverServiceImpl.class
 com\carpooling\controller\ChatController.class
 com\carpooling\service\impl\OrganisationServiceImpl.class
+com\carpooling\service\impl\UserActivityServiceImpl.class
 com\carpooling\enums\VerificationStatus.class
 com\carpooling\service\impl\EmailVerificationServiceImpl.class
 com\carpooling\CarpoolingApplication.class
+com\carpooling\enums\CancellationReason.class
 com\carpooling\service\impl\PaymentServiceImpl.class
 com\carpooling\service\impl\VehicleServiceImpl.class
 com\carpooling\service\VehicleService.class
@@ -138,6 +143,7 @@ com\carpooling\dto\response\RideScheduleResponse.class
 com\carpooling\service\impl\ChatServiceImpl.class
 com\carpooling\entity\RoleRequest.class
 com\carpooling\dto\response\RoleRequestResponse.class
+com\carpooling\dto\response\UserActivityResponse$UserActivityResponseBuilder.class
 com\carpooling\dto\response\RatingResponse$RatingResponseBuilder.class
 com\carpooling\entity\RideSchedule.class
 com\carpooling\service\RideScheduleService.class

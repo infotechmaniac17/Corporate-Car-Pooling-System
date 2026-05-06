@@ -5,7 +5,9 @@ import com.carpooling.enums.ScheduleStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -42,6 +44,7 @@ public class RideSchedule {
     private BigDecimal detourLimitPercent = BigDecimal.valueOf(20.00);
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "schedule_status")
     @Builder.Default
     private ScheduleStatus status = ScheduleStatus.CREATED;
