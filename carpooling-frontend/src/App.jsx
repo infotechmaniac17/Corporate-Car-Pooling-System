@@ -156,12 +156,14 @@ function MatchingWrapper() {
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 
-export default function App() {
-  const activityState = useUserActivity();
-
-  const U = ({ children, driverOnly = false }) => (
+function U({ children, driverOnly = false, activityState }) {
+  return (
     <UserRoute driverOnly={driverOnly} activityState={activityState}>{children}</UserRoute>
   );
+}
+
+export default function App() {
+  const activityState = useUserActivity();
 
   return (
     <Routes>
@@ -176,20 +178,20 @@ export default function App() {
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 
       {/* Rider / driver */}
-      <Route path="/home"             element={<U><HomeScreen activityState={activityState} /></U>} />
-      <Route path="/match"            element={<U><MatchingWrapper /></U>} />
-      <Route path="/tracking/:rideId" element={<U><TrackingWrapper /></U>} />
-      <Route path="/chat/:rideId"     element={<U><ChatWrapper /></U>} />
-      <Route path="/sos/:rideId"      element={<U><SosWrapper /></U>} />
-      <Route path="/driver/inbox"              element={<U driverOnly><DriverInboxScreen /></U>} />
-      <Route path="/driver/inbox/:rideId"      element={<U driverOnly><DriverInboxScreen /></U>} />
-      <Route path="/driver/offer-ride"         element={<U driverOnly><DriverOfferRideScreen activityState={activityState} /></U>} />
-      <Route path="/driver/my-rides"           element={<U driverOnly><DriverMyRidesScreen /></U>} />
-      <Route path="/driver/vehicles"           element={<U driverOnly><DriverVehiclesScreen /></U>} />
-      <Route path="/profile"                   element={<U><ProfileScreen activityState={activityState} /></U>} />
-      <Route path="/payments"                  element={<U><PaymentsScreen /></U>} />
-      <Route path="/pending-approval"          element={<U><PendingApprovalScreen /></U>} />
-      <Route path="/become-driver"             element={<U><DriverApplicationScreen /></U>} />
+      <Route path="/home"             element={<U activityState={activityState}><HomeScreen activityState={activityState} /></U>} />
+      <Route path="/match"            element={<U activityState={activityState}><MatchingWrapper /></U>} />
+      <Route path="/tracking/:rideId" element={<U activityState={activityState}><TrackingWrapper /></U>} />
+      <Route path="/chat/:rideId"     element={<U activityState={activityState}><ChatWrapper /></U>} />
+      <Route path="/sos/:rideId"      element={<U activityState={activityState}><SosWrapper /></U>} />
+      <Route path="/driver/inbox"              element={<U driverOnly activityState={activityState}><DriverInboxScreen /></U>} />
+      <Route path="/driver/inbox/:rideId"      element={<U driverOnly activityState={activityState}><DriverInboxScreen /></U>} />
+      <Route path="/driver/offer-ride"         element={<U driverOnly activityState={activityState}><DriverOfferRideScreen activityState={activityState} /></U>} />
+      <Route path="/driver/my-rides"           element={<U driverOnly activityState={activityState}><DriverMyRidesScreen /></U>} />
+      <Route path="/driver/vehicles"           element={<U driverOnly activityState={activityState}><DriverVehiclesScreen /></U>} />
+      <Route path="/profile"                   element={<U activityState={activityState}><ProfileScreen activityState={activityState} /></U>} />
+      <Route path="/payments"                  element={<U activityState={activityState}><PaymentsScreen /></U>} />
+      <Route path="/pending-approval"          element={<U activityState={activityState}><PendingApprovalScreen /></U>} />
+      <Route path="/become-driver"             element={<U activityState={activityState}><DriverApplicationScreen /></U>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

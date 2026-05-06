@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import WpAppBar from '../components/WpAppBar';
@@ -7,6 +7,7 @@ import WpIcon from '../components/WpIcon';
 import WpAvatar from '../components/WpAvatar';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { submitPassengerRequest } from '../api/roleRequests';
+import { getUser } from '../api/users';
 
 function Field({ label, value, onChange, type = 'text', readOnly = false }) {
   return (
@@ -50,6 +51,21 @@ export default function ProfileScreen({ activityState }) {
   const [riderLoading, setRiderLoading] = useState(false);
   const [riderModalOpen, setRiderModalOpen] = useState(false);
   const [riderModalError, setRiderModalError] = useState('');
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    getUser(currentUser.id)
+      .then(res => {
+        const { role, driverStatus, passengerStatus, name, phone } = res.data.data;
+        updateUser({ role, driverStatus, passengerStatus, name, phone });
+        setForm(f => ({
+          ...f,
+          name: name || f.name,
+          phone: phone || f.phone,
+        }));
+      })
+      .catch(() => {});
+  }, []);
 
   const initials = (form.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const roleLabel = currentUser?.role === 'DRIVER' ? 'Driver' : currentUser?.role === 'BOTH' ? 'Rider & Driver' : 'Rider';
