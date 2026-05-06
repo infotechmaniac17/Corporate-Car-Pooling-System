@@ -67,6 +67,7 @@ com\carpooling\dto\response\RoleRequestResponse$RoleRequestResponseBuilder.class
 com\carpooling\entity\Rating.class
 com\carpooling\entity\SosIncident.class
 com\carpooling\dto\response\ChatMessageResponse.class
+com\carpooling\dto\response\ProfileStatsResponse$ProfileStatsResponseBuilder.class
 com\carpooling\controller\MatchingController.class
 com\carpooling\entity\RideRequest$RideRequestBuilder.class
 com\carpooling\dto\request\RegisterRequest.class
@@ -81,6 +82,7 @@ com\carpooling\controller\PaymentController.class
 com\carpooling\controller\RideScheduleController.class
 com\carpooling\dto\response\RidePassengerResponse$RidePassengerResponseBuilder.class
 com\carpooling\dto\response\SosIncidentResponse.class
+com\carpooling\dto\request\UpdateUserRequest.class
 com\carpooling\entity\Transaction$TransactionBuilder.class
 com\carpooling\dto\response\UserActivityResponse.class
 com\carpooling\entity\BackupRide.class
@@ -155,6 +157,7 @@ com\carpooling\entity\EmailVerification$EmailVerificationBuilder.class
 com\carpooling\dto\response\SosIncidentResponse$SosIncidentResponseBuilder.class
 com\carpooling\entity\RidePassenger.class
 com\carpooling\service\impl\RoleRequestServiceImpl.class
+com\carpooling\dto\response\ProfileStatsResponse.class
 com\carpooling\entity\Route$RouteBuilder.class
 com\carpooling\entity\RideLocationPing.class
 com\carpooling\service\TrackingService.class
