@@ -169,7 +169,7 @@ export default function DriverOfferRideScreen({ activityState }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 28, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
-            <Form />
+            {Form()}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
@@ -208,7 +208,7 @@ export default function DriverOfferRideScreen({ activityState }) {
       <WpAppBar title="Offer a ride" onBack={() => navigate(-1)} dark />
       <div style={{ padding: 16 }}>
         <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 20, boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
-          <Form />
+          {Form()}
         </div>
       </div>
     </div>

@@ -217,7 +217,7 @@ export default function MatchingScreen({ onSelect, onBack }) {
           {/* Left panel */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', paddingRight: '20px' }}>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', padding: '16px', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
-              <SearchInputs />
+              {SearchInputs()}
             </div>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', padding: '16px', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>Sort by</div>
@@ -264,7 +264,7 @@ export default function MatchingScreen({ onSelect, onBack }) {
       <WpAppBar title="Find a Ride" sub="Matching nearby drivers" onBack={onBack} />
 
       <div style={{ background: '#fff', padding: '16px', borderBottom: '1px solid var(--asphalt-100)' }}>
-        <SearchInputs />
+        {SearchInputs()}
       </div>
 
       <div style={{ padding: '12px 16px', background: '#fff', borderBottom: '1px solid var(--asphalt-100)', display: 'flex', gap: '8px', overflowX: 'auto' }}>

@@ -133,7 +133,7 @@ export default function DriverVehiclesScreen() {
           </WpButton>
         )}
       </div>
-      {showForm && <AddForm />}
+      {showForm && AddForm()}
       {vehicles.length === 0 && !showForm ? (
         <div style={{ background: '#fff', borderRadius: 'var(--radius-lg)', padding: '40px 20px', textAlign: 'center', border: '1.5px dashed var(--asphalt-200)' }}>
           <WpIcon name="car" size={36} color="var(--asphalt-300)" />
@@ -162,7 +162,7 @@ export default function DriverVehiclesScreen() {
           <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Register and manage your vehicles</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
-          <Content />
+          {Content()}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Fleet summary</div>
@@ -206,7 +206,7 @@ export default function DriverVehiclesScreen() {
     <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)', paddingBottom: 40 }}>
       <WpAppBar title="My vehicles" onBack={() => navigate(-1)} dark />
       <div style={{ padding: 16 }}>
-        <Content />
+        {Content()}
       </div>
     </div>
   );

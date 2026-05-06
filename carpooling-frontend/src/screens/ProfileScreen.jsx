@@ -461,7 +461,7 @@ export default function ProfileScreen({ activityState }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 28, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
-            <FormSection />
+            {FormSection()}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
@@ -481,7 +481,7 @@ export default function ProfileScreen({ activityState }) {
       <WpAppBar title="Profile" onBack={() => navigate(-1)} dark />
       <div style={{ padding: '16px' }}>
         <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 20, boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
-          <FormSection />
+          {FormSection()}
         </div>
       </div>
       <RiderAccessModal />
