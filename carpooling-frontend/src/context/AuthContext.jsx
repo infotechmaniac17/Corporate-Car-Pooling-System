@@ -1,7 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import * as authApi from '../api/auth';
 
 const AuthContext = createContext(null);
+
+function defaultModeForRole(role) {
+  return role === 'DRIVER' ? 'driver' : 'rider';
+}
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -13,12 +17,21 @@ export function AuthProvider({ children }) {
     }
   });
   const [token, setToken] = useState(() => localStorage.getItem('wp_token') || null);
-  const [pendingRoleSelection, setPendingRoleSelection] = useState(null); // { userId, email }
+  const [pendingRoleSelection, setPendingRoleSelection] = useState(null);
+  const [activeMode, setActiveModeState] = useState(() => {
+    return localStorage.getItem('wp_active_mode') || 'rider';
+  });
 
   const isAuthenticated = !!token && !!currentUser;
   const isDriver = currentUser?.role === 'DRIVER' || currentUser?.role === 'BOTH';
   const isAdmin = currentUser?.role === 'ADMIN';
   const isPendingDriver = currentUser?.driverStatus === 'PENDING';
+  const isBothRole = currentUser?.role === 'BOTH';
+
+  const setActiveMode = useCallback((mode) => {
+    localStorage.setItem('wp_active_mode', mode);
+    setActiveModeState(mode);
+  }, []);
 
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password);
@@ -30,10 +43,13 @@ export function AuthProvider({ children }) {
     }
 
     const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
+    const mode = defaultModeForRole(role);
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));
+    localStorage.setItem('wp_active_mode', mode);
     setToken(jwt);
     setCurrentUser(user);
+    setActiveModeState(mode);
     return user;
   }, []);
 
@@ -42,10 +58,13 @@ export function AuthProvider({ children }) {
     const res = await authApi.selectRole(pendingRoleSelection.userId, selectedRole);
     const { token: jwt, userId, email: userEmail, role } = res.data.data;
     const user = { id: userId, email: userEmail, role };
+    const mode = defaultModeForRole(role);
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));
+    localStorage.setItem('wp_active_mode', mode);
     setToken(jwt);
     setCurrentUser(user);
+    setActiveModeState(mode);
     setPendingRoleSelection(null);
     return user;
   }, [pendingRoleSelection]);
@@ -54,23 +73,42 @@ export function AuthProvider({ children }) {
     const res = await authApi.register(data);
     const { token: jwt, userId, email: userEmail, role, driverStatus, passengerStatus } = res.data.data;
     const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
+    const mode = defaultModeForRole(role);
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));
+    localStorage.setItem('wp_active_mode', mode);
     setToken(jwt);
     setCurrentUser(user);
+    setActiveModeState(mode);
     return user;
+  }, []);
+
+  const updateUser = useCallback((patch) => {
+    setCurrentUser(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem('wp_user', JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('wp_token');
     localStorage.removeItem('wp_user');
+    localStorage.removeItem('wp_active_mode');
     setToken(null);
     setCurrentUser(null);
+    setActiveModeState('rider');
     setPendingRoleSelection(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, token, isAuthenticated, isDriver, isAdmin, isPendingDriver, pendingRoleSelection, login, confirmRole, logout, register }}>
+    <AuthContext.Provider value={{
+      currentUser, token, isAuthenticated, isDriver, isAdmin,
+      isPendingDriver, isBothRole, pendingRoleSelection,
+      activeMode, setActiveMode,
+      login, confirmRole, logout, register, updateUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );

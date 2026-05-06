@@ -4,7 +4,9 @@ import com.carpooling.enums.RequestStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
 
 import java.time.OffsetDateTime;
@@ -33,6 +35,7 @@ public class RideRequest {
     private Point dropLocation;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "request_status")
     @Builder.Default
     private RequestStatus status = RequestStatus.PENDING;

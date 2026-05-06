@@ -1,0 +1,52 @@
+
+> carpooling-frontend@0.1.0 dev
+> vite
+
+Re-optimizing dependencies because vite config has changed
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m622[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m1:05:55 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/RegisterScreen.jsx[22m
+[2m1:06:03 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/RegisterScreen.jsx[22m
+[2m1:06:11 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/RegisterScreen.jsx[22m
+[2m1:06:40 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/RegisterScreen.jsx[22m
+[2m1:06:58 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/RegisterScreen.jsx[22m
+[2m1:07:09 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/RegisterScreen.jsx[22m
+[2m1:07:19 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:07:26 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:07:33 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:15:33 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:15:42 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:16:05 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:18:10 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/context/AuthContext.jsx[22m
+[2m1:18:10 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/context/AuthContext.jsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:18:10 am[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/context/AuthContext.jsx[22m
+[2m1:18:21 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/context/AuthContext.jsx[22m
+[2m1:18:21 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/context/AuthContext.jsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:18:21 am[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/context/AuthContext.jsx[22m
+[2m1:18:27 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:18:36 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:18:49 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:47:56 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/context/AuthContext.jsx[22m
+[2m1:47:57 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/context/AuthContext.jsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:47:57 am[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/context/AuthContext.jsx[22m
+[2m1:48:25 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/context/AuthContext.jsx[22m
+[2m1:48:26 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/context/AuthContext.jsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:48:26 am[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/context/AuthContext.jsx[22m
+[2m1:49:42 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AppShell.jsx[22m
+[2m1:50:24 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:50:53 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/HomeScreen.jsx[22m
+[2m1:51:00 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/HomeScreen.jsx[22m
+[2m1:51:09 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/HomeScreen.jsx[22m
+[2m1:51:33 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/DriverOfferRideScreen.jsx[22m
+[2m1:51:48 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/DriverOfferRideScreen.jsx[22m
+[2m1:51:52 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/DriverOfferRideScreen.jsx[22m
+[2m1:52:06 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:52:22 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/ProfileScreen.jsx[22m
+[2m1:53:00 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:53:25 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/screens/MatchingScreen.jsx, /src/screens/HomeScreen.jsx, /src/screens/DriverInboxScreen.jsx, /src/screens/DriverOfferRideScreen.jsx, /src/screens/DriverMyRidesScreen.jsx[22m
+[2m1:53:58 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:54:16 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:54:50 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m

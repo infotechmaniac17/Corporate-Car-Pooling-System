@@ -33,10 +33,11 @@ function Field({ label, value, onChange, type = 'text', readOnly = false }) {
   );
 }
 
-export default function ProfileScreen() {
-  const { currentUser, logout } = useAuth();
+export default function ProfileScreen({ activityState }) {
+  const { currentUser, logout, updateUser, isBothRole, activeMode, setActiveMode } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
+  const hasInProgressTrip = activityState?.hasInProgressTrip ?? false;
 
   const [form, setForm] = useState({
     name: currentUser?.name || '',
@@ -47,6 +48,8 @@ export default function ProfileScreen() {
   const [saved, setSaved] = useState(false);
   const [riderEnabled, setRiderEnabled] = useState(false);
   const [riderLoading, setRiderLoading] = useState(false);
+  const [riderModalOpen, setRiderModalOpen] = useState(false);
+  const [riderModalError, setRiderModalError] = useState('');
 
   const initials = (form.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const roleLabel = currentUser?.role === 'DRIVER' ? 'Driver' : currentUser?.role === 'BOTH' ? 'Rider & Driver' : 'Rider';
@@ -58,8 +61,39 @@ export default function ProfileScreen() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const MobileModeSwitcher = () => {
+    if (!isBothRole) return null;
+    const isDriver = activeMode === 'driver';
+    const pillStyle = (selected) => ({
+      flex: 1, padding: '8px 0', borderRadius: 999, border: 'none',
+      cursor: hasInProgressTrip ? 'not-allowed' : 'pointer',
+      background: selected ? 'var(--ink-950)' : 'transparent',
+      color: selected ? '#fff' : 'var(--asphalt-500)',
+      fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-sans)',
+      transition: 'all 0.15s',
+      opacity: hasInProgressTrip && !selected ? 0.4 : 1,
+    });
+    return (
+      <div style={{ marginBottom: 20, padding: '14px 16px', background: 'var(--asphalt-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--asphalt-100)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+          Active mode
+        </div>
+        {hasInProgressTrip && (
+          <div style={{ fontSize: 12, color: 'var(--warn-700, #92400e)', background: 'var(--warn-50, #fffbeb)', border: '1px solid var(--warn-200, #fde68a)', borderRadius: 8, padding: '6px 10px', marginBottom: 8 }}>
+            Cannot switch during an active trip.
+          </div>
+        )}
+        <div style={{ display: 'flex', background: 'var(--asphalt-100)', borderRadius: 999, padding: 3 }}>
+          <button style={pillStyle(!isDriver)} onClick={() => !hasInProgressTrip && setActiveMode('rider')}>Rider</button>
+          <button style={pillStyle(isDriver)} onClick={() => !hasInProgressTrip && setActiveMode('driver')}>Driver</button>
+        </div>
+      </div>
+    );
+  };
+
   const FormSection = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <MobileModeSwitcher />
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '20px 0', marginBottom: 24, borderBottom: '1px solid var(--asphalt-100)',
@@ -118,7 +152,7 @@ export default function ProfileScreen() {
               </button>
             )}
             {(!currentUser?.driverStatus || currentUser?.driverStatus === 'NONE' || currentUser?.driverStatus === 'REJECTED') && (
-              <button onClick={() => navigate('/register')} style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--ink-50)', color: 'var(--ink-700)', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+              <button onClick={() => navigate('/become-driver')} style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--ink-50)', color: 'var(--ink-700)', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
                 Apply →
               </button>
             )}
@@ -128,8 +162,17 @@ export default function ProfileScreen() {
               kind="secondary" size="sm"
               onClick={() => {
                 setRiderLoading(true);
+                setRiderModalError('');
                 submitPassengerRequest()
-                  .then(() => setRiderEnabled(true))
+                  .then(() => {
+                    setRiderEnabled(true);
+                    updateUser({ passengerStatus: 'APPROVED', role: 'BOTH' });
+                    setRiderModalOpen(true);
+                  })
+                  .catch(err => {
+                    setRiderModalError(err?.response?.data?.message || 'Could not enable rider access. Please try again.');
+                    setRiderModalOpen(true);
+                  })
                   .finally(() => setRiderLoading(false));
               }}
               disabled={riderLoading || riderEnabled}
@@ -152,6 +195,66 @@ export default function ProfileScreen() {
     </div>
   );
 
+  const RiderAccessModal = () => {
+    if (!riderModalOpen) return null;
+    const isError = !!riderModalError;
+    const handleClose = () => {
+      setRiderModalOpen(false);
+    };
+    return (
+      <div
+        onClick={handleClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(7,10,38,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: 20, fontFamily: 'var(--font-sans)',
+          backdropFilter: 'blur(4px)',
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: '#fff', borderRadius: 20, padding: 36,
+            width: '100%', maxWidth: 420, textAlign: 'center',
+            boxShadow: '0 32px 80px rgba(7,10,38,0.5)',
+          }}
+        >
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%',
+            background: isError ? 'var(--danger-100)' : 'var(--success-100)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+          }}>
+            <WpIcon
+              name={isError ? 'x' : 'check'}
+              size={36}
+              color={isError ? 'var(--danger-700)' : 'var(--success-700)'}
+            />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 10, letterSpacing: '-0.01em' }}>
+            {isError ? 'Could not enable rider access' : 'Rider access enabled!'}
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--asphalt-500)', lineHeight: 1.6, marginBottom: 28 }}>
+            {isError
+              ? riderModalError
+              : "You can now book rides as a passenger in addition to driving. Your account now has both roles active."}
+          </p>
+          <button
+            onClick={handleClose}
+            style={{
+              padding: '13px 32px', borderRadius: 999,
+              background: 'var(--ink-600)', color: '#fff', border: 'none',
+              font: '700 14px var(--font-sans)', cursor: 'pointer',
+              minWidth: 160,
+            }}
+          >
+            {isError ? 'Close' : 'Continue'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (isDesktop) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
@@ -164,6 +267,7 @@ export default function ProfileScreen() {
             <FormSection />
           </div>
         </div>
+        <RiderAccessModal />
       </div>
     );
   }
@@ -176,6 +280,7 @@ export default function ProfileScreen() {
           <FormSection />
         </div>
       </div>
+      <RiderAccessModal />
     </div>
   );
 }

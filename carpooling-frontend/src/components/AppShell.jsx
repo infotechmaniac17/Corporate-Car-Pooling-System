@@ -5,40 +5,81 @@ import WpIcon from './WpIcon';
 import WpAvatar from './WpAvatar';
 
 const RIDER_NAV = [
-  { id: 'home',     label: 'Home',       icon: 'home',    path: '/home' },
+  { id: 'home',     label: 'Home',        icon: 'home',    path: '/home' },
   { id: 'match',    label: 'Find a ride', icon: 'search',  path: '/match' },
   { id: 'payments', label: 'Payments',    icon: 'wallet',  path: '/payments' },
   { id: 'profile',  label: 'Profile',     icon: 'user',    path: '/profile' },
 ];
 
 const DRIVER_NAV = [
-  { id: 'home',       label: 'Home',       icon: 'home',        path: '/home' },
-  { id: 'offer',      label: 'Offer ride', icon: 'plus',        path: '/driver/offer-ride' },
-  { id: 'my-rides',   label: 'My rides',   icon: 'car',         path: '/driver/my-rides' },
-  { id: 'inbox',      label: 'Requests',   icon: 'bell',        path: '/driver/inbox' },
-  { id: 'vehicles',   label: 'Vehicles',   icon: 'settings',    path: '/driver/vehicles' },
-  { id: 'profile',    label: 'Profile',    icon: 'user',        path: '/profile' },
+  { id: 'home',     label: 'Home',       icon: 'home',     path: '/home' },
+  { id: 'offer',    label: 'Offer ride', icon: 'plus',     path: '/driver/offer-ride' },
+  { id: 'my-rides', label: 'My rides',   icon: 'car',      path: '/driver/my-rides' },
+  { id: 'inbox',    label: 'Requests',   icon: 'bell',     path: '/driver/inbox' },
+  { id: 'vehicles', label: 'Vehicles',   icon: 'settings', path: '/driver/vehicles' },
+  { id: 'profile',  label: 'Profile',    icon: 'user',     path: '/profile' },
 ];
 
-export default function AppShell({ children }) {
-  const { currentUser, isDriver, logout } = useAuth();
+function ModeSwitchPill({ activeMode, onSwitch, blocked }) {
+  const isDriver = activeMode === 'driver';
+  const pillStyle = (selected) => ({
+    flex: 1, padding: '6px 0', borderRadius: 999, border: 'none',
+    cursor: blocked ? 'not-allowed' : 'pointer',
+    background: selected ? 'var(--voltage-400)' : 'transparent',
+    color: selected ? 'var(--ink-950)' : 'rgba(255,255,255,0.5)',
+    fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-sans)',
+    transition: 'all 0.15s',
+    opacity: blocked && !selected ? 0.4 : 1,
+  });
+
+  return (
+    <div style={{
+      display: 'flex', background: 'rgba(255,255,255,0.08)',
+      borderRadius: 999, padding: 3, margin: '12px 12px 0',
+    }}>
+      <button
+        style={pillStyle(!isDriver)}
+        onClick={() => onSwitch('rider')}
+        title={blocked ? 'Cannot switch during an active trip' : ''}
+      >
+        Rider
+      </button>
+      <button
+        style={pillStyle(isDriver)}
+        onClick={() => onSwitch('driver')}
+        title={blocked ? 'Cannot switch during an active trip' : ''}
+      >
+        Driver
+      </button>
+    </div>
+  );
+}
+
+export default function AppShell({ children, activityState }) {
+  const { currentUser, isBothRole, activeMode, setActiveMode, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const navItems = isDriver ? DRIVER_NAV : RIDER_NAV;
+  const hasInProgressTrip = activityState?.hasInProgressTrip ?? false;
+  const navItems = activeMode === 'driver' ? DRIVER_NAV : RIDER_NAV;
+  const roleLabel = activeMode === 'driver' ? 'DRIVER' : 'RIDER';
+
+  const handleModeSwitch = (mode) => {
+    if (mode === activeMode || hasInProgressTrip) return;
+    setActiveMode(mode);
+    navigate('/home');
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'var(--font-sans)', background: 'var(--asphalt-50)' }}>
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside style={{
-        width: 220, flexShrink: 0,
-        background: 'var(--ink-950)',
+        width: 220, flexShrink: 0, background: 'var(--ink-950)',
         display: 'flex', flexDirection: 'column',
-        position: 'fixed', top: 0, bottom: 0, left: 0,
-        overflowY: 'auto', zIndex: 50,
+        position: 'fixed', top: 0, bottom: 0, left: 0, overflowY: 'auto', zIndex: 50,
       }}>
-        {/* Logo + role label */}
+        {/* Logo */}
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <svg width="32" height="32" viewBox="0 0 44 44" fill="none">
@@ -49,11 +90,20 @@ export default function AppShell({ children }) {
             <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>waypoint</span>
           </div>
           <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
-            {isDriver ? 'Driver portal' : 'Rider portal'}
+            {roleLabel} portal
           </span>
         </div>
 
-        {/* Nav items */}
+        {/* Mode switcher pill — BOTH role only */}
+        {isBothRole && (
+          <ModeSwitchPill
+            activeMode={activeMode}
+            onSwitch={handleModeSwitch}
+            blocked={hasInProgressTrip}
+          />
+        )}
+
+        {/* Nav */}
         <nav style={{ flex: 1, padding: 12 }}>
           {navItems.map(item => {
             const isActive = pathname === item.path || pathname.startsWith(item.path + '/');
@@ -81,7 +131,7 @@ export default function AppShell({ children }) {
           })}
         </nav>
 
-        {/* User info + sign out */}
+        {/* User + sign out */}
         <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', marginBottom: 4 }}>
             <WpAvatar
@@ -94,7 +144,7 @@ export default function AppShell({ children }) {
                 {currentUser?.name || 'User'}
               </div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-                {isDriver ? 'DRIVER' : 'RIDER'}
+                {roleLabel}
               </div>
             </div>
           </div>
@@ -110,7 +160,7 @@ export default function AppShell({ children }) {
         </div>
       </aside>
 
-      {/* ── Content area ────────────────────────────────────────────────────── */}
+      {/* ── Content ─────────────────────────────────────────────────────── */}
       <main style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         {children}
       </main>

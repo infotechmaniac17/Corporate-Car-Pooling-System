@@ -17,3 +17,7 @@ export const getSchedule = (id) =>
 
 export const createSchedule = (data) =>
   api.post('/rides/schedules', data);
+
+// reasonCode: 'EMERGENCY' | 'VEHICLE_ISSUE' | 'PERSONAL' | 'OTHER', note: string (optional)
+export const cancelSchedule = (scheduleId, reasonCode, note) =>
+  api.delete(`/rides/schedules/${scheduleId}`, { data: { reasonCode, note } });

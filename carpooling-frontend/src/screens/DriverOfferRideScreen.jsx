@@ -36,10 +36,11 @@ function TextInput({ value, onChange, placeholder, type = 'text' }) {
   );
 }
 
-export default function DriverOfferRideScreen() {
+export default function DriverOfferRideScreen({ activityState }) {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
+  const isBlocked = activityState?.hasOpenRequest ?? false;
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -85,6 +86,11 @@ export default function DriverOfferRideScreen() {
 
   const Form = () => (
     <div>
+      {isBlocked && (
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--warn-100, #fff8e1)', border: '1px solid var(--warn-300, #ffe082)', color: 'var(--warn-800, #6d4c00)', fontSize: 13, marginBottom: 16, fontFamily: 'var(--font-sans)' }}>
+          You have an open rider request. Cancel it first to offer a ride.
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ gridColumn: '1 / -1' }}>
           <Field label="Pickup location">
@@ -137,7 +143,7 @@ export default function DriverOfferRideScreen() {
         </div>
       )}
 
-      <WpButton kind="accent" size="md" full onClick={handleSubmit} disabled={submitting || success}>
+      <WpButton kind="accent" size="md" full onClick={handleSubmit} disabled={submitting || success || isBlocked}>
         {submitting ? 'Creating…' : 'Offer this ride'}
       </WpButton>
     </div>
