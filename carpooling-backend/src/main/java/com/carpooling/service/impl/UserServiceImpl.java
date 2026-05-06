@@ -6,11 +6,17 @@ import com.carpooling.common.exception.ResourceNotFoundException;
 import com.carpooling.config.JwtUtil;
 import com.carpooling.dto.request.LoginRequest;
 import com.carpooling.dto.request.RegisterRequest;
+import com.carpooling.dto.request.UpdateUserRequest;
 import com.carpooling.dto.response.AuthResponse;
+import com.carpooling.dto.response.ProfileStatsResponse;
 import com.carpooling.dto.response.UserResponse;
 import com.carpooling.entity.Organisation;
 import com.carpooling.entity.User;
+import com.carpooling.enums.PassengerStatus;
+import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.repository.OrganisationRepository;
+import com.carpooling.repository.RidePassengerRepository;
+import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.UserRepository;
 import com.carpooling.service.EmailService;
 import com.carpooling.service.EmailVerificationService;
@@ -42,6 +48,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private final AuthenticationManager authenticationManager;
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
+    private final RidePassengerRepository ridePassengerRepository;
+    private final RideScheduleRepository rideScheduleRepository;
 
     @Value("${app.base-url:http://localhost:5173}")
     private String baseUrl;
@@ -55,7 +63,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                            JwtUtil jwtUtil,
                            @Lazy AuthenticationManager authenticationManager,
                            EmailVerificationService emailVerificationService,
-                           EmailService emailService) {
+                           EmailService emailService,
+                           RidePassengerRepository ridePassengerRepository,
+                           RideScheduleRepository rideScheduleRepository) {
         this.userRepository = userRepository;
         this.organisationRepository = organisationRepository;
         this.passwordEncoder = passwordEncoder;
@@ -63,6 +73,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         this.authenticationManager = authenticationManager;
         this.emailVerificationService = emailVerificationService;
         this.emailService = emailService;
+        this.ridePassengerRepository = ridePassengerRepository;
+        this.rideScheduleRepository = rideScheduleRepository;
     }
 
     @Override
@@ -165,6 +177,33 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setIsOnline(!user.getIsOnline());
         return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateProfile(Long userId, UpdateUserRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("User", userId);
+        }
+        user.setName(request.getName().trim());
+        user.setPhone(request.getPhone().trim());
+        user.setGender(request.getGender());
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    public ProfileStatsResponse getProfileStats(Long userId) {
+        return ProfileStatsResponse.builder()
+                .totalRidesTaken(ridePassengerRepository.countByPassengerId(userId))
+                .completedRidesAsPassenger(ridePassengerRepository.countByPassengerIdAndStatus(userId, PassengerStatus.COMPLETED))
+                .cancelledRidesAsPassenger(ridePassengerRepository.countByPassengerIdAndStatus(userId, PassengerStatus.CANCELLED))
+                .totalRidesOffered(rideScheduleRepository.countByDriverId(userId))
+                .completedRidesAsDriver(rideScheduleRepository.countByDriverIdAndStatus(userId, ScheduleStatus.COMPLETED))
+                .cancelledRidesAsDriver(rideScheduleRepository.countByDriverIdAndStatus(userId, ScheduleStatus.CANCELLED))
+                .totalPassengersServed(ridePassengerRepository.countPassengersServedByDriver(userId))
+                .build();
     }
 
     @Override

@@ -2,6 +2,8 @@ package com.carpooling.controller;
 
 import com.carpooling.common.ApiResponse;
 import com.carpooling.config.JwtUtil;
+import com.carpooling.dto.request.UpdateUserRequest;
+import com.carpooling.dto.response.ProfileStatsResponse;
 import com.carpooling.dto.response.RidePassengerResponse;
 import com.carpooling.dto.response.UserActivityResponse;
 import com.carpooling.dto.response.UserResponse;
@@ -9,6 +11,7 @@ import com.carpooling.service.RidePassengerService;
 import com.carpooling.service.UserActivityService;
 import com.carpooling.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +36,20 @@ public class UserController {
     @GetMapping("/organisation/{orgId}")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getUsersByOrg(@PathVariable Long orgId) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getUsersByOrganisation(orgId)));
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
+            @Valid @RequestBody UpdateUserRequest request,
+            HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(userService.updateProfile(userId, request)));
+    }
+
+    @GetMapping("/me/profile-stats")
+    public ResponseEntity<ApiResponse<ProfileStatsResponse>> profileStats(HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(userService.getProfileStats(userId)));
     }
 
     @PatchMapping("/me/online")
