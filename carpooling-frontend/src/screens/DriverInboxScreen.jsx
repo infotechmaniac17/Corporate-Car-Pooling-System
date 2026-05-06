@@ -139,7 +139,7 @@ export default function DriverInboxScreen({ rideId }) {
 
         <div style={{ padding: '24px 40px 40px' }}>
           {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px', maxWidth: 1200 }}>
               {[1, 2, 3].map(i => (
                 <div key={i} style={{ height: '220px', borderRadius: 'var(--radius-lg)', background: 'linear-gradient(90deg, var(--asphalt-100) 25%, var(--asphalt-50) 50%, var(--asphalt-100) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
               ))}
@@ -149,7 +149,7 @@ export default function DriverInboxScreen({ rideId }) {
               <EmptyState />
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px', maxWidth: 1200 }}>
               {requests.map(req => <RequestCard key={req.id} req={req} />)}
             </div>
           )}

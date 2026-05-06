@@ -150,15 +150,53 @@ export default function DriverOfferRideScreen({ activityState }) {
   );
 
   if (isDesktop) {
+    const tips = [
+      { icon: 'wallet', title: 'Set a fair fare', desc: 'Cover fuel costs — ₹100–₹200/seat for city commutes works well.', bg: 'var(--success-100)', color: 'var(--success-700)' },
+      { icon: 'users', title: 'Offer more seats', desc: 'More seats = more matches. Even 3 seats doubles your chance of getting riders.', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
+      { icon: 'clock', title: 'Be punctual', desc: 'Riders plan their commute around your schedule. A consistent time builds trust.', bg: 'var(--voltage-50, #f5ffe0)', color: 'var(--ink-600)' },
+    ];
+    const steps = [
+      'Post a ride with your route and time',
+      'Riders from your organisation request to join',
+      'You accept or decline each request',
+      'Complete the ride and get rated',
+    ];
     return (
       <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
         <div style={{ padding: '32px 40px 0' }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em' }}>Offer a ride</h1>
           <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Create a new ride for riders to book</p>
         </div>
-        <div style={{ padding: '24px 40px', maxWidth: 600 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 28, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
             <Form />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Tips for a great ride</div>
+              {tips.map(t => (
+                <div key={t.title} style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <WpIcon name={t.icon} size={16} color={t.color} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 2 }}>{t.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--asphalt-500)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>{t.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: 'var(--ink-950)', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 14 }}>How it works</div>
+              {steps.map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'flex-start' }}>
+                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--voltage-400)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink-950)', fontFamily: 'var(--font-mono)' }}>{i + 1}</span>
+                  </div>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>{step}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

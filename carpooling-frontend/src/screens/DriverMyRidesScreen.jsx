@@ -149,14 +149,43 @@ export default function DriverMyRidesScreen() {
   );
 
   if (isDesktop) {
+    const completed = rides.filter(r => r.status === 'COMPLETED').length;
+    const cancelled = rides.filter(r => r.status === 'CANCELLED').length;
     return (
       <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
         <div style={{ padding: '32px 40px 0' }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em' }}>My rides</h1>
           <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Your scheduled and completed rides</p>
         </div>
-        <div style={{ padding: '24px 40px', maxWidth: 680 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
           <Content />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Overview</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { label: 'Total rides', value: rides.length, icon: 'car', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
+                  { label: 'Upcoming', value: upcoming.length, icon: 'clock', bg: 'var(--voltage-50, #f5ffe0)', color: 'var(--ink-600)' },
+                  { label: 'Completed', value: completed, icon: 'check', bg: 'var(--success-100)', color: 'var(--success-700)' },
+                  { label: 'Cancelled', value: cancelled, icon: 'x', bg: 'var(--asphalt-100)', color: 'var(--asphalt-500)' },
+                ].map(s => (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <WpIcon name={s.icon} size={14} color={s.color} />
+                      </div>
+                      <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{s.label}</span>
+                    </div>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <WpButton kind="accent" size="md" full onClick={() => navigate('/driver/offer-ride')}>
+              <WpIcon name="plus" size={15} color="var(--ink-950)" />
+              New ride
+            </WpButton>
+          </div>
         </div>
       </div>
     );

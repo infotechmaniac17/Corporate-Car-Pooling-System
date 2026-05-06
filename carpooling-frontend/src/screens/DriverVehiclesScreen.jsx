@@ -152,14 +152,51 @@ export default function DriverVehiclesScreen() {
   );
 
   if (isDesktop) {
+    const totalSeats = vehicles.reduce((s, v) => s + v.seats, 0);
+    const activeCount = vehicles.filter(v => v.status === 'ACTIVE').length;
+    const docs = ['Registration Certificate (RC)', 'Insurance policy', 'PUC certificate', "Driver's licence"];
     return (
       <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
         <div style={{ padding: '32px 40px 0' }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em' }}>My vehicles</h1>
           <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Register and manage your vehicles</p>
         </div>
-        <div style={{ padding: '24px 40px', maxWidth: 640 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
           <Content />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Fleet summary</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { label: 'Vehicles', value: vehicles.length, icon: 'car', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
+                  { label: 'Total seats', value: totalSeats, icon: 'users', bg: 'var(--success-100)', color: 'var(--success-700)' },
+                  { label: 'Active', value: activeCount, icon: 'check', bg: 'var(--voltage-50, #f5ffe0)', color: 'var(--ink-600)' },
+                ].map(s => (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <WpIcon name={s.icon} size={14} color={s.color} />
+                      </div>
+                      <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{s.label}</span>
+                    </div>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 14 }}>Document checklist</div>
+              {docs.map(doc => (
+                <div key={doc} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <div style={{ width: 16, height: 16, borderRadius: 4, background: 'var(--success-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <WpIcon name="check" size={10} color="var(--success-700)" />
+                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{doc}</span>
+                </div>
+              ))}
+              <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Keep all docs current to stay eligible for rides.</div>
+            </div>
+          </div>
         </div>
       </div>
     );

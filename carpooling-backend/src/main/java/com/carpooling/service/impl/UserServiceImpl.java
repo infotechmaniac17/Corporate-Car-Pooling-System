@@ -151,7 +151,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), selectedRole);
-        return new AuthResponse(token, user.getId(), user.getEmail(), selectedRole);
+        return new AuthResponse(token, user.getId(), user.getEmail(), selectedRole,
+                user.getDriverStatus().name(), user.getPassengerStatus().name());
     }
 
     @Override
