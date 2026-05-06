@@ -2,10 +2,12 @@ import React from 'react';
 import { Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import useIsDesktop from './hooks/useIsDesktop';
+import useUserActivity from './hooks/useUserActivity';
 
 import SplashScreen from './screens/SplashScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import HomeScreen from './screens/HomeScreen';
 import MatchingScreen from './screens/MatchingScreen';
 import TrackingScreen from './screens/TrackingScreen';
@@ -21,6 +23,44 @@ import AdminDashboard from './admin/AdminDashboard';
 import WebLogin from './admin/WebLogin';
 import AppShell from './components/AppShell';
 import PendingApprovalScreen from './screens/PendingApprovalScreen';
+import DriverApplicationScreen from './screens/DriverApplicationScreen';
+
+// ─── Mode-switch blocker modal ────────────────────────────────────────────────
+
+function DriverModeModal({ onClose, onSwitch }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 16, padding: 32, maxWidth: 360, width: '90%',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+      }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 8 }}>
+          Switch to Driver mode?
+        </h3>
+        <p style={{ fontSize: 14, color: 'var(--asphalt-500)', marginBottom: 24 }}>
+          This page is for drivers. Switch to driver mode to access it.
+        </p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={onClose}
+            style={{ flex: 1, padding: '10px 0', borderRadius: 999, border: '1px solid var(--asphalt-200)', background: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSwitch}
+            style={{ flex: 1, padding: '10px 0', borderRadius: 999, border: 'none', background: 'var(--ink-950)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+          >
+            Switch mode
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Guards ───────────────────────────────────────────────────────────────────
 
@@ -42,19 +82,32 @@ function RootRedirect() {
   return <Navigate to={isAdmin ? '/admin' : isPendingDriver ? '/pending-approval' : '/home'} replace />;
 }
 
-// Rider / driver routes — desktop: AppShell sidebar; mobile: device-frame
-function UserRoute({ children, driverOnly = false }) {
-  const { isAuthenticated, isDriver, isAdmin } = useAuth();
+function UserRoute({ children, driverOnly = false, activityState }) {
+  const { isAuthenticated, isAdmin, isDriver, activeMode, setActiveMode } = useAuth();
+  const navigate = useNavigate();
   const isDesktop = useIsDesktop();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (driverOnly && !isDriver && !isAdmin) return <Navigate to="/home" replace />;
 
-  if (isDesktop) return <AppShell>{children}</AppShell>;
+  if (driverOnly && !isAdmin) {
+    if (!isDriver) return <Navigate to="/home" replace />;
+    if (activeMode !== 'driver') {
+      return (
+        <>
+          <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--asphalt-50)' }} />
+          <DriverModeModal
+            onClose={() => navigate(-1)}
+            onSwitch={() => setActiveMode('driver')}
+          />
+        </>
+      );
+    }
+  }
+
+  if (isDesktop) return <AppShell activityState={activityState}>{children}</AppShell>;
   return <div className="device-frame">{children}</div>;
 }
 
-// Admin-only — full-width, no shell
 function AdminRoute({ children }) {
   const { isAuthenticated, isAdmin } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -101,9 +154,15 @@ function MatchingWrapper() {
   );
 }
 
-// ─── Routes ──────────────────────────────────────────────────────────────────
+// ─── App ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const activityState = useUserActivity();
+
+  const U = ({ children, driverOnly = false }) => (
+    <UserRoute driverOnly={driverOnly} activityState={activityState}>{children}</UserRoute>
+  );
+
   return (
     <Routes>
       {/* Public */}
@@ -111,24 +170,26 @@ export default function App() {
       <Route path="/login"           element={<WebLogin />} />
       <Route path="/register"        element={<RegisterScreen />} />
       <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+      <Route path="/reset-password"  element={<ResetPasswordScreen />} />
 
-      {/* Admin — full-width dashboard */}
+      {/* Admin */}
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 
-      {/* Rider / driver — responsive (AppShell on desktop, device-frame on mobile) */}
-      <Route path="/home"             element={<UserRoute><HomeScreen /></UserRoute>} />
-      <Route path="/match"            element={<UserRoute><MatchingWrapper /></UserRoute>} />
-      <Route path="/tracking/:rideId" element={<UserRoute><TrackingWrapper /></UserRoute>} />
-      <Route path="/chat/:rideId"     element={<UserRoute><ChatWrapper /></UserRoute>} />
-      <Route path="/sos/:rideId"      element={<UserRoute><SosWrapper /></UserRoute>} />
-      <Route path="/driver/inbox"              element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
-      <Route path="/driver/inbox/:rideId"      element={<UserRoute driverOnly><DriverInboxScreen /></UserRoute>} />
-      <Route path="/driver/offer-ride"         element={<UserRoute driverOnly><DriverOfferRideScreen /></UserRoute>} />
-      <Route path="/driver/my-rides"           element={<UserRoute driverOnly><DriverMyRidesScreen /></UserRoute>} />
-      <Route path="/driver/vehicles"           element={<UserRoute driverOnly><DriverVehiclesScreen /></UserRoute>} />
-      <Route path="/profile"                   element={<UserRoute><ProfileScreen /></UserRoute>} />
-      <Route path="/payments"                  element={<UserRoute><PaymentsScreen /></UserRoute>} />
-      <Route path="/pending-approval"          element={<UserRoute><PendingApprovalScreen /></UserRoute>} />
+      {/* Rider / driver */}
+      <Route path="/home"             element={<U><HomeScreen activityState={activityState} /></U>} />
+      <Route path="/match"            element={<U><MatchingWrapper /></U>} />
+      <Route path="/tracking/:rideId" element={<U><TrackingWrapper /></U>} />
+      <Route path="/chat/:rideId"     element={<U><ChatWrapper /></U>} />
+      <Route path="/sos/:rideId"      element={<U><SosWrapper /></U>} />
+      <Route path="/driver/inbox"              element={<U driverOnly><DriverInboxScreen /></U>} />
+      <Route path="/driver/inbox/:rideId"      element={<U driverOnly><DriverInboxScreen /></U>} />
+      <Route path="/driver/offer-ride"         element={<U driverOnly><DriverOfferRideScreen activityState={activityState} /></U>} />
+      <Route path="/driver/my-rides"           element={<U driverOnly><DriverMyRidesScreen /></U>} />
+      <Route path="/driver/vehicles"           element={<U driverOnly><DriverVehiclesScreen /></U>} />
+      <Route path="/profile"                   element={<U><ProfileScreen activityState={activityState} /></U>} />
+      <Route path="/payments"                  element={<U><PaymentsScreen /></U>} />
+      <Route path="/pending-approval"          element={<U><PendingApprovalScreen /></U>} />
+      <Route path="/become-driver"             element={<U><DriverApplicationScreen /></U>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

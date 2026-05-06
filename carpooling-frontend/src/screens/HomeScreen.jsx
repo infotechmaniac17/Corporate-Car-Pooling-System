@@ -58,8 +58,8 @@ function RideCard({ ride, onClick }) {
   );
 }
 
-export default function HomeScreen() {
-  const { currentUser, logout } = useAuth();
+export default function HomeScreen({ activityState }) {
+  const { currentUser, logout, activeMode } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const [rides, setRides] = useState([]);
@@ -67,6 +67,9 @@ export default function HomeScreen() {
   const [tab, setTab] = useState('home');
 
   const firstName = currentUser?.name?.split(' ')[0] || 'there';
+  const { hasOpenRequest, hasActiveSchedule } = activityState || {};
+  const riderBlocked = hasActiveSchedule;
+  const driverBlocked = hasOpenRequest;
 
   useEffect(() => {
     getMyRequests()
@@ -134,7 +137,12 @@ export default function HomeScreen() {
             </div>
           </div>
         </div>
-        <WpButton kind="accent" size="md" full onClick={() => navigate('/match')}>
+        {riderBlocked && (
+          <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(255,200,0,0.15)', border: '1px solid rgba(255,200,0,0.3)', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontFamily: 'var(--font-sans)', marginBottom: 12 }}>
+            Active driver ride scheduled — cancel it to request a ride.
+          </div>
+        )}
+        <WpButton kind="accent" size="md" full onClick={() => !riderBlocked && navigate('/match')} disabled={riderBlocked}>
           <WpIcon name="search" size={18} color="var(--ink-950)" />
           Find a ride
         </WpButton>

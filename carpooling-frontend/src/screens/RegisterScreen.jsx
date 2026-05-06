@@ -5,7 +5,7 @@ import WpButton from '../components/WpButton';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getAllOrganisations } from '../api/organisations';
 import { sendOtp as apiSendOtp } from '../api/auth';
-import { submitDriverRequest } from '../api/roleRequests';
+import DriverDocsForm from '../components/DriverDocsForm';
 
 // ─── Module-level constants & components ─────────────────────────────────────
 
@@ -235,30 +235,10 @@ const INITIAL_FORM = {
   otp: '',
 };
 
-const INITIAL_DRIVER_DOCS = {
-  vehiclePlate: '',
-  vehicleModel: '',
-  vehicleType: '',
-  vehicleFuel: '',
-  vehicleSeats: '',
-  licenseNumber: '',
-  licenseExpiry: '',
-  idProofType: '',
-  idProofNumber: '',
-  rcNumber: '',
-  insuranceNumber: '',
-  insuranceExpiry: '',
-  licenseDoc: null,
-  idProofDoc: null,
-  rcDoc: null,
-  insuranceDoc: null,
-};
-
 export default function RegisterScreen() {
   const isDesktop = useIsDesktop();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL_FORM);
-  const [driverDocs, setDriverDocs] = useState(INITIAL_DRIVER_DOCS);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -316,13 +296,6 @@ export default function RegisterScreen() {
     }
   };
 
-  const setDoc = (field) => (e) => {
-    const file = e.target.files?.[0] || null;
-    setDriverDocs(prev => ({ ...prev, [field]: file }));
-  };
-  const setDocField = (field) => (e) =>
-    setDriverDocs(prev => ({ ...prev, [field]: e.target.value }));
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -360,121 +333,6 @@ export default function RegisterScreen() {
       setLoading(false);
     }
   };
-
-  const handleDriverDocsSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    const { vehiclePlate, vehicleModel, vehicleType, vehicleFuel, vehicleSeats,
-            licenseNumber, licenseExpiry, idProofType, idProofNumber,
-            rcNumber, insuranceNumber, insuranceExpiry,
-            licenseDoc, idProofDoc, rcDoc, insuranceDoc } = driverDocs;
-
-    if (!licenseDoc || !idProofDoc || !rcDoc || !insuranceDoc)
-      return setError('Please upload all four required documents.');
-
-    const fd = new FormData();
-    fd.append('data', new Blob([JSON.stringify({
-      vehiclePlate, vehicleModel, vehicleType, vehicleFuel,
-      vehicleSeats: Number(vehicleSeats),
-      licenseNumber, licenseExpiry,
-      idProofType, idProofNumber,
-      rcNumber, insuranceNumber, insuranceExpiry,
-    })], { type: 'application/json' }));
-    fd.append('licenseDoc', licenseDoc);
-    fd.append('idProofDoc', idProofDoc);
-    fd.append('rcDoc', rcDoc);
-    fd.append('insuranceDoc', insuranceDoc);
-
-    setLoading(true);
-    try {
-      await submitDriverRequest(fd);
-      navigate('/pending-approval');
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Document submission failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const FileInput = ({ label, field, value }) => (
-    <div>
-      <label style={labelStyle}>{label}</label>
-      <label style={{ display: 'block', cursor: 'pointer' }}>
-        <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={setDoc(field)} style={{ display: 'none' }} />
-        <div style={{ ...inputStyle, color: value ? 'var(--asphalt-900)' : 'var(--asphalt-400)', cursor: 'pointer', fontSize: 14 }}>
-          {value ? value.name : 'Choose file (JPG, PNG or PDF)'}
-        </div>
-      </label>
-    </div>
-  );
-
-  const renderDriverDocsForm = () => (
-    <>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 4 }}>
-        Vehicle details
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <Field label="Number plate" value={driverDocs.vehiclePlate} onChange={e => setDocField('vehiclePlate')({ target: { value: e.target.value } })} placeholder="KA 01 AB 1234" required />
-        <Field label="Model" value={driverDocs.vehicleModel} onChange={e => setDocField('vehicleModel')({ target: { value: e.target.value } })} placeholder="Honda City" required />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-        <div>
-          <label style={labelStyle}>Type</label>
-          <select value={driverDocs.vehicleType} onChange={setDocField('vehicleType')} required style={selectStyle}>
-            <option value="">Select</option>
-            {['Sedan','Hatchback','SUV','MPV'].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Fuel</label>
-          <select value={driverDocs.vehicleFuel} onChange={setDocField('vehicleFuel')} required style={selectStyle}>
-            <option value="">Select</option>
-            {['Petrol','Diesel','CNG','Electric'].map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-        </div>
-        <Field label="Seats" type="number" value={driverDocs.vehicleSeats} onChange={e => setDocField('vehicleSeats')({ target: { value: e.target.value } })} placeholder="4" required />
-      </div>
-
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 4, marginTop: 8 }}>
-        Driving license
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <Field label="License number" value={driverDocs.licenseNumber} onChange={e => setDocField('licenseNumber')({ target: { value: e.target.value } })} placeholder="MH1234567890123" required />
-        <Field label="Expiry date" type="date" value={driverDocs.licenseExpiry} onChange={e => setDocField('licenseExpiry')({ target: { value: e.target.value } })} required />
-      </div>
-      <FileInput label="License document" field="licenseDoc" value={driverDocs.licenseDoc} />
-
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 4, marginTop: 8 }}>
-        ID proof
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <div>
-          <label style={labelStyle}>ID type</label>
-          <select value={driverDocs.idProofType} onChange={setDocField('idProofType')} required style={selectStyle}>
-            <option value="">Select</option>
-            {['Aadhaar','PAN','Passport'].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <Field label="ID number" value={driverDocs.idProofNumber} onChange={e => setDocField('idProofNumber')({ target: { value: e.target.value } })} placeholder="XXXX XXXX XXXX" required />
-      </div>
-      <FileInput label="ID document" field="idProofDoc" value={driverDocs.idProofDoc} />
-
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 4, marginTop: 8 }}>
-        Vehicle RC
-      </div>
-      <Field label="RC number" value={driverDocs.rcNumber} onChange={e => setDocField('rcNumber')({ target: { value: e.target.value } })} placeholder="MH0120231234567" required />
-      <FileInput label="RC document" field="rcDoc" value={driverDocs.rcDoc} />
-
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 4, marginTop: 8 }}>
-        Insurance
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <Field label="Policy number" value={driverDocs.insuranceNumber} onChange={e => setDocField('insuranceNumber')({ target: { value: e.target.value } })} placeholder="POL12345678" required />
-        <Field label="Expiry date" type="date" value={driverDocs.insuranceExpiry} onChange={e => setDocField('insuranceExpiry')({ target: { value: e.target.value } })} required />
-      </div>
-      <FileInput label="Insurance document" field="insuranceDoc" value={driverDocs.insuranceDoc} />
-    </>
-  );
 
   const renderFormFields = () => (
     <>
@@ -568,17 +426,7 @@ export default function RegisterScreen() {
               </div>
               <h1 style={{ font: '700 22px/1.2 var(--font-sans)', color: 'var(--asphalt-900)', letterSpacing: '-0.02em', marginBottom: '6px' }}>Driver verification</h1>
               <p style={{ font: '500 13px var(--font-sans)', color: 'var(--asphalt-500)', marginBottom: '24px' }}>Upload your documents for admin review. This typically takes 1–2 business days.</p>
-              {error && <div style={{ padding: '12px 16px', borderRadius: 10, background: 'var(--danger-100)', color: 'var(--danger-700)', font: '500 13px var(--font-sans)', marginBottom: '20px' }}>{error}</div>}
-              <form onSubmit={handleDriverDocsSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {renderDriverDocsForm()}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ marginTop: '4px', width: '100%', padding: '14px', borderRadius: 999, background: 'var(--ink-600)', color: '#fff', border: 'none', font: '700 15px var(--font-sans)', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, transition: 'opacity 0.14s' }}
-                >
-                  {loading ? 'Submitting…' : 'Submit for verification'}
-                </button>
-              </form>
+              <DriverDocsForm onSuccess={() => navigate('/pending-approval')} />
             </>
           )}
 
@@ -649,19 +497,7 @@ export default function RegisterScreen() {
         ) : (
           <>
             <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', font: '600 13px var(--font-sans)', color: 'var(--ink-600)', padding: '0 0 16px', display: 'block' }}>← Back to info</button>
-            <form onSubmit={handleDriverDocsSubmit}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {renderDriverDocsForm()}
-                {error && (
-                  <div style={{ padding: '12px 16px', background: 'var(--danger-100)', border: '1px solid var(--danger-500)', borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--danger-700)', fontFamily: 'var(--font-sans)' }}>
-                    {error}
-                  </div>
-                )}
-                <WpButton kind="primary" size="lg" full type="submit" disabled={loading}>
-                  {loading ? 'Submitting…' : 'Submit for verification'}
-                </WpButton>
-              </div>
-            </form>
+            <DriverDocsForm onSuccess={() => navigate('/pending-approval')} />
           </>
         )}
       </div>
