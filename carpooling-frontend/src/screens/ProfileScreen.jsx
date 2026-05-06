@@ -8,6 +8,7 @@ import WpAvatar from '../components/WpAvatar';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { submitPassengerRequest } from '../api/roleRequests';
 import { getUser, updateMe, getProfileStats } from '../api/users';
+import AddressInput from '../components/AddressInput';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -105,6 +106,8 @@ export default function ProfileScreen({ activityState }) {
     name: currentUser?.name || '',
     phone: currentUser?.phone || '',
     gender: currentUser?.gender || '',
+    homeAddress: currentUser?.homeAddress ? { label: currentUser.homeAddress, lat: currentUser.homeLat, lng: currentUser.homeLng } : null,
+    secondaryAddress: currentUser?.secondaryAddress ? { label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng } : null,
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -130,6 +133,8 @@ export default function ProfileScreen({ activityState }) {
           name: name || f.name,
           phone: phone || f.phone,
           gender: gender || f.gender,
+          homeAddress: res.data.data.homeAddress ? { label: res.data.data.homeAddress, lat: res.data.data.homeLat, lng: res.data.data.homeLng } : f.homeAddress,
+          secondaryAddress: res.data.data.secondaryAddress ? { label: res.data.data.secondaryAddress, lat: res.data.data.secondaryLat, lng: res.data.data.secondaryLng } : f.secondaryAddress,
         }));
         setRating(r);
       })
@@ -152,9 +157,24 @@ export default function ProfileScreen({ activityState }) {
     setSaving(true);
     setSaveError('');
     try {
-      const res = await updateMe({ name: form.name.trim(), phone: form.phone.trim(), gender: form.gender });
+      const payload = { name: form.name.trim(), phone: form.phone.trim(), gender: form.gender };
+      if (form.homeAddress?.label) {
+        payload.homeAddress = form.homeAddress.label;
+        payload.homeLat = form.homeAddress.lat;
+        payload.homeLng = form.homeAddress.lng;
+      }
+      if (form.secondaryAddress?.label) {
+        payload.secondaryAddress = form.secondaryAddress.label;
+        payload.secondaryLat = form.secondaryAddress.lat;
+        payload.secondaryLng = form.secondaryAddress.lng;
+      }
+      const res = await updateMe(payload);
       const updated = res.data.data;
-      updateUser({ name: updated.name, phone: updated.phone, gender: updated.gender });
+      updateUser({
+        name: updated.name, phone: updated.phone, gender: updated.gender,
+        homeAddress: updated.homeAddress, homeLat: updated.homeLat, homeLng: updated.homeLng,
+        secondaryAddress: updated.secondaryAddress, secondaryLat: updated.secondaryLat, secondaryLng: updated.secondaryLng,
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
@@ -377,6 +397,24 @@ export default function ProfileScreen({ activityState }) {
       <Field label="Email" value={currentUser?.email || ''} readOnly />
       <Field label="Phone" value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} type="tel" />
       <GenderSelect value={form.gender} onChange={v => setForm(f => ({ ...f, gender: v }))} />
+
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--asphalt-100)', marginBottom: 16 }}>
+        <SectionLabel>Commute addresses</SectionLabel>
+        <div style={{ marginBottom: 14 }}>
+          <AddressInput
+            label="Home address"
+            value={form.homeAddress}
+            onChange={addr => setForm(f => ({ ...f, homeAddress: addr }))}
+            placeholder="Where you commute from…"
+          />
+        </div>
+        <AddressInput
+          label="Secondary address (optional)"
+          value={form.secondaryAddress}
+          onChange={addr => setForm(f => ({ ...f, secondaryAddress: addr }))}
+          placeholder="Gym, relative's place, alternate pickup…"
+        />
+      </div>
 
       {saveError && (
         <div style={{ fontSize: 12, color: 'var(--danger-600)', marginBottom: 10, padding: '8px 12px', background: 'var(--danger-50)', borderRadius: 8, border: '1px solid var(--danger-200)' }}>

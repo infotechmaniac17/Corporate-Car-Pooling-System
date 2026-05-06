@@ -45,8 +45,8 @@ export default function DriverOfferRideScreen({ activityState }) {
   const today = new Date().toISOString().slice(0, 10);
 
   const [form, setForm] = useState({
-    pickup: currentUser?.pickupLocation || '',
-    dropoff: currentUser?.dropLocation || '',
+    pickup: currentUser?.homeAddress || '',
+    dropoff: currentUser?.organisationName || '',
     date: today,
     time: '08:30',
     seats: 3,

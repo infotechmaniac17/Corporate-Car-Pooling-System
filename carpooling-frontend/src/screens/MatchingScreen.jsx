@@ -4,7 +4,9 @@ import WpButton from '../components/WpButton';
 import WpAvatar from '../components/WpAvatar';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
+import AddressInput from '../components/AddressInput';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useAuth } from '../context/AuthContext';
 import { findMatches } from '../api/matching';
 import { createRequest } from '../api/rides';
 
@@ -32,7 +34,8 @@ const mockRides = [
   { id: '3', driverName: 'Ravi Kumar', rating: 4.6, seats: 1, fare: 140, detourMin: 2, etaMin: 9, origin: 'Indiranagar', destination: 'Marathahalli', distance: '12.8 km' },
 ];
 
-export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
+export default function MatchingScreen({ onSelect, onBack }) {
+  const { currentUser } = useAuth();
   const isDesktop = useIsDesktop();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,12 +44,21 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
   const [error, setError] = useState('');
   const [selectedRide, setSelectedRide] = useState(null);
 
+  const [pickupAddr, setPickupAddr] = useState(
+    currentUser?.homeAddress ? { label: currentUser.homeAddress } : null
+  );
+  const [dropoffAddr, setDropoffAddr] = useState(
+    currentUser?.organisationName ? { label: currentUser.organisationName } : null
+  );
+
   useEffect(() => {
-    findMatches({ pickupLocation: pickup || 'Home', dropoffLocation: dropoff || 'Office' })
+    const pickupLabel = pickupAddr?.label || 'Home';
+    const dropoffLabel = dropoffAddr?.label || 'Office';
+    findMatches({ pickupLocation: pickupLabel, dropoffLocation: dropoffLabel })
       .then(res => setRides(res.data?.length ? res.data : mockRides))
       .catch(() => setRides(mockRides))
       .finally(() => setLoading(false));
-  }, [pickup, dropoff]);
+  }, []);
 
   const sortedRides = [...rides].sort((a, b) => {
     if (activeFilter === 'Cheapest') return (a.fare || 0) - (b.fare || 0);
@@ -61,8 +73,8 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
     try {
       await createRequest({
         rideId: ride.id,
-        pickupLocation: pickup || 'Home',
-        dropoffLocation: dropoff || 'Office',
+        pickupLocation: pickupAddr?.label || 'Home',
+        dropoffLocation: dropoffAddr?.label || 'Office',
       });
       if (onSelect) onSelect(ride);
     } catch (err) {
@@ -73,15 +85,29 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
   };
 
   const SearchInputs = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: 'var(--asphalt-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--asphalt-100)' }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ink-500)', flexShrink: 0 }} />
-        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>{pickup || 'Home'}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: 'var(--asphalt-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--asphalt-100)' }}>
-        <div style={{ width: 8, height: 8, borderRadius: '2px', background: 'var(--voltage-400)', flexShrink: 0 }} />
-        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>{dropoff || 'Office'}</span>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <AddressInput
+        label="Pickup"
+        value={pickupAddr}
+        onChange={setPickupAddr}
+        placeholder="Where are you starting from?"
+      />
+      <AddressInput
+        label="Drop-off"
+        value={dropoffAddr}
+        onChange={setDropoffAddr}
+        placeholder="Where are you going?"
+      />
+      <WpButton kind="accent" size="sm" full onClick={() => {
+        setLoading(true);
+        findMatches({ pickupLocation: pickupAddr?.label || 'Home', dropoffLocation: dropoffAddr?.label || 'Office' })
+          .then(res => setRides(res.data?.length ? res.data : mockRides))
+          .catch(() => setRides(mockRides))
+          .finally(() => setLoading(false));
+      }}>
+        <WpIcon name="search" size={14} color="var(--ink-950)" />
+        Search rides
+      </WpButton>
     </div>
   );
 

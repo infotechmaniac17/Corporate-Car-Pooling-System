@@ -24,6 +24,7 @@ import WebLogin from './admin/WebLogin';
 import AppShell from './components/AppShell';
 import PendingApprovalScreen from './screens/PendingApprovalScreen';
 import DriverApplicationScreen from './screens/DriverApplicationScreen';
+import AddressSetupScreen from './screens/AddressSetupScreen';
 
 // ─── Mode-switch blocker modal ────────────────────────────────────────────────
 
@@ -146,8 +147,6 @@ function MatchingWrapper() {
   const navigate = useNavigate();
   return (
     <MatchingScreen
-      pickup="Home"
-      dropoff="Office"
       onSelect={(ride) => navigate(`/tracking/${ride.id}`)}
       onBack={() => navigate(-1)}
     />
@@ -192,6 +191,7 @@ export default function App() {
       <Route path="/payments"                  element={<U activityState={activityState}><PaymentsScreen /></U>} />
       <Route path="/pending-approval"          element={<U activityState={activityState}><PendingApprovalScreen /></U>} />
       <Route path="/become-driver"             element={<U activityState={activityState}><DriverApplicationScreen /></U>} />
+      <Route path="/setup-address"             element={<U activityState={activityState}><AddressSetupScreen /></U>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

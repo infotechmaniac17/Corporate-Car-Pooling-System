@@ -8,6 +8,7 @@ import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getMyRequests, getSchedule, getDriverRequests } from '../api/rides';
+import { getUser } from '../api/users';
 
 function getDayTime() {
   const now = new Date();
@@ -97,7 +98,7 @@ function QuickAction({ icon, label, onClick, accent = false }) {
 // ─── Rider Home ───────────────────────────────────────────────────────────────
 
 function RiderHome({ activityState }) {
-  const { currentUser } = useAuth();
+  const { currentUser, updateUser } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const [rides, setRides] = useState([]);
@@ -109,10 +110,17 @@ function RiderHome({ activityState }) {
   const riderBlocked = hasActiveSchedule;
 
   useEffect(() => {
-    getMyRequests()
-      .then(res => setRides(res.data?.data || []))
-      .catch(() => setRides([]))
-      .finally(() => setLoading(false));
+    Promise.all([
+      getMyRequests().then(res => setRides(res.data?.data || [])).catch(() => setRides([])),
+      currentUser?.id
+        ? getUser(currentUser.id)
+            .then(res => {
+              const d = res.data.data;
+              updateUser({ homeAddress: d.homeAddress, homeLat: d.homeLat, homeLng: d.homeLng });
+            })
+            .catch(() => {})
+        : Promise.resolve(),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const upcomingRides = rides.filter(r =>
@@ -159,13 +167,13 @@ function RiderHome({ activityState }) {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#fff', fontFamily: 'var(--font-sans)' }}>
-                {currentUser?.pickupLocation || 'Home'}
+                {currentUser?.homeAddress || 'Home'}
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>Pickup · 8:30 AM</div>
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#fff', fontFamily: 'var(--font-sans)' }}>
-                {currentUser?.dropLocation || 'Office'}
+                {currentUser?.organisationName || 'Office'}
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>Drop · ~9:15 AM</div>
             </div>
@@ -240,6 +248,19 @@ function RiderHome({ activityState }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '24px 40px 40px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <CommuteCard />
+            {!currentUser?.homeAddress && (
+              <div
+                onClick={() => navigate('/setup-address')}
+                style={{ background: 'var(--ink-50)', border: '1.5px dashed var(--ink-200)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+              >
+                <WpIcon name="home" size={16} color="var(--ink-600)" />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-700)', fontFamily: 'var(--font-sans)' }}>Add your home address</div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-500)', fontFamily: 'var(--font-mono)' }}>Pre-fill rides and improve your matches</div>
+                </div>
+                <WpIcon name="chevron-right" size={15} color="var(--ink-400)" />
+              </div>
+            )}
             <StatsRow />
           </div>
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: '24px', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
@@ -264,6 +285,19 @@ function RiderHome({ activityState }) {
         }
       />
       <div style={{ margin: '16px' }}><CommuteCard /></div>
+      {!currentUser?.homeAddress && (
+        <div
+          onClick={() => navigate('/setup-address')}
+          style={{ margin: '0 16px 16px', background: 'var(--ink-50)', border: '1.5px dashed var(--ink-200)', borderRadius: 'var(--radius-lg)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+        >
+          <WpIcon name="home" size={15} color="var(--ink-600)" />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-700)', fontFamily: 'var(--font-sans)' }}>Add your home address</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-500)', fontFamily: 'var(--font-mono)' }}>Pre-fill rides and improve your matches</div>
+          </div>
+          <WpIcon name="chevron-right" size={15} color="var(--ink-400)" />
+        </div>
+      )}
       <div style={{ margin: '0 16px 20px' }}><StatsRow compact /></div>
       <div style={{ margin: '0 16px' }}><UpcomingSection /></div>
       <WpBottomNav active={tab} onTap={handleTabTap} />
