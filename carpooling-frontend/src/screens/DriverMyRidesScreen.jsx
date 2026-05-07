@@ -6,12 +6,13 @@ import WpButton from '../components/WpButton';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { getSchedule } from '../api/rides';
+import { getSchedule, cancelSchedule } from '../api/rides';
 
-const STATUS_TONE = { SCHEDULED: 'matched', LIVE: 'live', COMPLETED: 'completed', CANCELLED: 'cancelled' };
+const STATUS_TONE = { CREATED: 'matched', ACTIVE: 'matched', STARTED: 'live', COMPLETED: 'completed', CANCELLED: 'cancelled' };
 
-function RideCard({ ride, onViewRequests }) {
-  const scheduled = ride.scheduledTime ? new Date(ride.scheduledTime) : null;
+function RideCard({ ride, onViewRequests, onCancel, cancelling }) {
+  const cancellable = ride.status === 'CREATED' || ride.status === 'ACTIVE';
+  const scheduled = ride.departureTime ? new Date(ride.departureTime) : null;
   const timeStr = scheduled
     ? scheduled.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '—';
@@ -25,25 +26,25 @@ function RideCard({ ride, onViewRequests }) {
       boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3 }}>
-            {ride.pickupLocation || 'Home'} → {ride.dropoffLocation || 'Office'}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {ride.pickupLabel || 'Pickup'} → {ride.dropoffLabel || 'Drop-off'}
           </div>
           <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
             {dateStr} · {timeStr}
           </div>
         </div>
-        <WpPill tone={STATUS_TONE[ride.status] || 'matched'}>{ride.status || 'SCHEDULED'}</WpPill>
+        <WpPill tone={STATUS_TONE[ride.status] || 'matched'}>{ride.status || 'CREATED'}</WpPill>
       </div>
 
       <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <WpIcon name="users" size={14} color="var(--asphalt-500)" />
           <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-mono)' }}>
-            {ride.bookedSeats || 0} / {ride.availableSeats || 4} seats
+            {ride.availableSeats || 0} seats free
           </span>
         </div>
-        {ride.fare && (
+        {ride.fare != null && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <WpIcon name="wallet" size={14} color="var(--asphalt-500)" />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-800)', fontFamily: 'var(--font-mono)' }}>
@@ -53,17 +54,34 @@ function RideCard({ ride, onViewRequests }) {
         )}
       </div>
 
-      <button
-        onClick={() => onViewRequests(ride.id)}
-        style={{
-          width: '100%', padding: '8px', borderRadius: 'var(--radius-md)',
-          border: '1.5px solid var(--asphalt-200)', background: '#fff',
-          fontSize: 13, fontWeight: 600, color: 'var(--asphalt-700)',
-          cursor: 'pointer', fontFamily: 'var(--font-sans)',
-        }}
-      >
-        View requests →
-      </button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => onViewRequests(ride.id)}
+          style={{
+            flex: 1, padding: '8px', borderRadius: 'var(--radius-md)',
+            border: '1.5px solid var(--asphalt-200)', background: '#fff',
+            fontSize: 13, fontWeight: 600, color: 'var(--asphalt-700)',
+            cursor: 'pointer', fontFamily: 'var(--font-sans)',
+          }}
+        >
+          View requests →
+        </button>
+        {cancellable && (
+          <button
+            onClick={() => onCancel(ride)}
+            disabled={cancelling}
+            style={{
+              padding: '8px 14px', borderRadius: 'var(--radius-md)',
+              border: '1.5px solid var(--danger-200)', background: 'var(--danger-50)',
+              fontSize: 13, fontWeight: 600, color: 'var(--danger-700)',
+              cursor: cancelling ? 'wait' : 'pointer', fontFamily: 'var(--font-sans)',
+              opacity: cancelling ? 0.5 : 1,
+            }}
+          >
+            {cancelling ? 'Cancelling…' : 'Cancel'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -75,13 +93,35 @@ export default function DriverMyRidesScreen() {
 
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState(null);
 
-  useEffect(() => {
-    getSchedule(currentUser?.id)
+  const load = () => {
+    if (!currentUser?.id) return;
+    setLoading(true);
+    getSchedule(currentUser.id)
       .then(res => setRides(res.data?.data || []))
       .catch(() => setRides([]))
       .finally(() => setLoading(false));
-  }, [currentUser?.id]);
+  };
+
+  useEffect(() => { load(); }, [currentUser?.id]);
+
+  const handleCancel = async (ride) => {
+    const note = window.prompt(
+      `Cancel ride ${ride.pickupLabel || ''} → ${ride.dropoffLabel || ''}?\nOptional reason:`,
+      ''
+    );
+    if (note === null) return;
+    setCancellingId(ride.id);
+    try {
+      await cancelSchedule(ride.id, 'OTHER', note || '');
+      await load();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to cancel ride.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const upcoming = rides.filter(r => r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
   const past = rides.filter(r => r.status === 'COMPLETED' || r.status === 'CANCELLED');
@@ -126,7 +166,13 @@ export default function DriverMyRidesScreen() {
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {upcoming.map(r => (
-                  <RideCard key={r.id} ride={r} onViewRequests={id => navigate(`/driver/inbox/${id}`)} />
+                  <RideCard
+                    key={r.id}
+                    ride={r}
+                    onViewRequests={id => navigate(`/driver/inbox/${id}`)}
+                    onCancel={handleCancel}
+                    cancelling={cancellingId === r.id}
+                  />
                 ))}
               </div>
             </div>
@@ -138,7 +184,13 @@ export default function DriverMyRidesScreen() {
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {past.map(r => (
-                  <RideCard key={r.id} ride={r} onViewRequests={id => navigate(`/driver/inbox/${id}`)} />
+                  <RideCard
+                    key={r.id}
+                    ride={r}
+                    onViewRequests={id => navigate(`/driver/inbox/${id}`)}
+                    onCancel={handleCancel}
+                    cancelling={cancellingId === r.id}
+                  />
                 ))}
               </div>
             </div>
@@ -149,14 +201,43 @@ export default function DriverMyRidesScreen() {
   );
 
   if (isDesktop) {
+    const completed = rides.filter(r => r.status === 'COMPLETED').length;
+    const cancelled = rides.filter(r => r.status === 'CANCELLED').length;
     return (
       <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
         <div style={{ padding: '32px 40px 0' }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em' }}>My rides</h1>
           <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Your scheduled and completed rides</p>
         </div>
-        <div style={{ padding: '24px 40px', maxWidth: 680 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
           <Content />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Overview</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { label: 'Total rides', value: rides.length, icon: 'car', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
+                  { label: 'Upcoming', value: upcoming.length, icon: 'clock', bg: 'var(--voltage-50, #f5ffe0)', color: 'var(--ink-600)' },
+                  { label: 'Completed', value: completed, icon: 'check', bg: 'var(--success-100)', color: 'var(--success-700)' },
+                  { label: 'Cancelled', value: cancelled, icon: 'x', bg: 'var(--asphalt-100)', color: 'var(--asphalt-500)' },
+                ].map(s => (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <WpIcon name={s.icon} size={14} color={s.color} />
+                      </div>
+                      <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{s.label}</span>
+                    </div>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <WpButton kind="accent" size="md" full onClick={() => navigate('/driver/offer-ride')}>
+              <WpIcon name="plus" size={15} color="var(--ink-950)" />
+              New ride
+            </WpButton>
+          </div>
         </div>
       </div>
     );

@@ -4,7 +4,9 @@ import WpButton from '../components/WpButton';
 import WpAvatar from '../components/WpAvatar';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
+import AddressInput from '../components/AddressInput';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useAuth } from '../context/AuthContext';
 import { findMatches } from '../api/matching';
 import { createRequest } from '../api/rides';
 
@@ -20,68 +22,143 @@ function StarRating({ value }) {
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
       <WpIcon name="star" size={12} color="var(--warning-500)" stroke={0} />
       <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--asphalt-700)', fontFamily: 'var(--font-mono)' }}>
-        {value ? value.toFixed(1) : '—'}
+        {value ? Number(value).toFixed(1) : '—'}
       </span>
     </span>
   );
 }
 
-const mockRides = [
-  { id: '1', driverName: 'Arjun Mehta', rating: 4.8, seats: 2, fare: 120, detourMin: 3, etaMin: 12, origin: 'Koramangala', destination: 'Whitefield', distance: '18.2 km' },
-  { id: '2', driverName: 'Priya Sharma', rating: 4.9, seats: 3, fare: 95, detourMin: 6, etaMin: 18, origin: 'HSR Layout', destination: 'Electronic City', distance: '14.5 km' },
-  { id: '3', driverName: 'Ravi Kumar', rating: 4.6, seats: 1, fare: 140, detourMin: 2, etaMin: 9, origin: 'Indiranagar', destination: 'Marathahalli', distance: '12.8 km' },
-];
+function defaultDepartureIso() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return d.toISOString();
+}
 
-export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
+export default function MatchingScreen({ onSelect, onBack }) {
+  const { currentUser } = useAuth();
   const isDesktop = useIsDesktop();
   const [rides, setRides] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [activeFilter, setActiveFilter] = useState('Closest');
   const [requesting, setRequesting] = useState(null);
   const [error, setError] = useState('');
   const [selectedRide, setSelectedRide] = useState(null);
 
+  const [pickupAddr, setPickupAddr] = useState(null);
+  const [dropoffAddr, setDropoffAddr] = useState(null);
+  const [departureIso, setDepartureIso] = useState(defaultDepartureIso());
+
+  // Prefill pickup from homeAddress (with coords), dropoff from secondaryAddress (office)
   useEffect(() => {
-    findMatches({ pickupLocation: pickup || 'Home', dropoffLocation: dropoff || 'Office' })
-      .then(res => setRides(res.data?.length ? res.data : mockRides))
-      .catch(() => setRides(mockRides))
-      .finally(() => setLoading(false));
-  }, [pickup, dropoff]);
+    if (currentUser?.homeAddress && currentUser?.homeLat != null && currentUser?.homeLng != null) {
+      setPickupAddr({ label: currentUser.homeAddress, lat: currentUser.homeLat, lng: currentUser.homeLng });
+    }
+  }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
+
+  useEffect(() => {
+    if (currentUser?.secondaryAddress && currentUser?.secondaryLat != null && currentUser?.secondaryLng != null) {
+      setDropoffAddr({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
+    }
+  }, [currentUser?.secondaryAddress, currentUser?.secondaryLat, currentUser?.secondaryLng]);
+
+  const search = async () => {
+    setError('');
+    if (!pickupAddr?.lat || !pickupAddr?.lng) { setError('Pick a pickup location.'); return; }
+    if (!dropoffAddr?.lat || !dropoffAddr?.lng) { setError('Pick a drop-off location.'); return; }
+    setLoading(true);
+    setSearched(true);
+    try {
+      const res = await findMatches({
+        pickupLat: pickupAddr.lat,
+        pickupLng: pickupAddr.lng,
+        dropLat: dropoffAddr.lat,
+        dropLng: dropoffAddr.lng,
+        desiredDepartureTime: departureIso,
+        searchRadiusMeters: 5000,
+      });
+      setRides(res.data?.data || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Search failed. Try again.');
+      setRides([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-search once on mount if coords prefilled
+  useEffect(() => {
+    if (pickupAddr?.lat && dropoffAddr?.lat && !searched) {
+      search();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickupAddr?.lat, dropoffAddr?.lat]);
 
   const sortedRides = [...rides].sort((a, b) => {
-    if (activeFilter === 'Cheapest') return (a.fare || 0) - (b.fare || 0);
-    if (activeFilter === 'Earliest') return (a.etaMin || 0) - (b.etaMin || 0);
-    if (activeFilter === 'Top rated') return (b.rating || 0) - (a.rating || 0);
-    return (a.detourMin || 0) - (b.detourMin || 0);
+    if (activeFilter === 'Cheapest')   return Number(a.estimatedFare || 0) - Number(b.estimatedFare || 0);
+    if (activeFilter === 'Earliest')   return new Date(a.departureTime || 0) - new Date(b.departureTime || 0);
+    if (activeFilter === 'Top rated')  return Number(b.driverRating || 0) - Number(a.driverRating || 0);
+    return Number(a.distanceToPickupMeters || 0) - Number(b.distanceToPickupMeters || 0);
   });
 
   const handleRequest = async (ride) => {
-    setRequesting(ride.id);
+    setRequesting(ride.rideScheduleId);
     setError('');
     try {
       await createRequest({
-        rideId: ride.id,
-        pickupLocation: pickup || 'Home',
-        dropoffLocation: dropoff || 'Office',
+        rideScheduleId: ride.rideScheduleId,
+        pickupLat: pickupAddr.lat,
+        pickupLng: pickupAddr.lng,
+        dropLat: dropoffAddr.lat,
+        dropLng: dropoffAddr.lng,
       });
       if (onSelect) onSelect(ride);
+      alert('Request sent. Driver will respond shortly.');
     } catch (err) {
-      setError('Could not send request. Please try again.');
+      setError(err?.response?.data?.message || 'Could not send request. Try again.');
     } finally {
       setRequesting(null);
     }
   };
 
   const SearchInputs = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: 'var(--asphalt-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--asphalt-100)' }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ink-500)', flexShrink: 0 }} />
-        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>{pickup || 'Home'}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <AddressInput
+        label="Pickup"
+        value={pickupAddr}
+        onChange={setPickupAddr}
+        placeholder="Where are you starting from?"
+      />
+      <AddressInput
+        label="Drop-off"
+        value={dropoffAddr}
+        onChange={setDropoffAddr}
+        placeholder="Where are you going?"
+      />
+      <div>
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+          Departure time
+        </label>
+        <input
+          type="datetime-local"
+          value={departureIso ? new Date(departureIso).toISOString().slice(0, 16) : ''}
+          onChange={e => {
+            const v = e.target.value;
+            setDepartureIso(v ? new Date(v).toISOString() : defaultDepartureIso());
+          }}
+          style={{
+            width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)',
+            border: '1.5px solid var(--asphalt-200)', fontSize: 14,
+            fontFamily: 'var(--font-sans)', color: 'var(--asphalt-900)',
+            background: '#fff', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: 'var(--asphalt-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--asphalt-100)' }}>
-        <div style={{ width: 8, height: 8, borderRadius: '2px', background: 'var(--voltage-400)', flexShrink: 0 }} />
-        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>{dropoff || 'Office'}</span>
-      </div>
+      <WpButton kind="accent" size="sm" full onClick={search} disabled={loading}>
+        <WpIcon name="search" size={14} color="var(--ink-950)" />
+        {loading ? 'Searching…' : 'Search rides'}
+      </WpButton>
     </div>
   );
 
@@ -112,6 +189,12 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
     </div>
   );
 
+  const formatDeparture = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
   const RideList = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {error && (
@@ -123,52 +206,66 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
         [1, 2, 3].map(i => (
           <div key={i} style={{ height: '140px', borderRadius: 'var(--radius-lg)', background: 'linear-gradient(90deg, var(--asphalt-100) 25%, var(--asphalt-50) 50%, var(--asphalt-100) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
         ))
+      ) : !searched ? (
+        <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--asphalt-400)', fontFamily: 'var(--font-sans)' }}>
+          <WpIcon name="search" size={40} color="var(--asphalt-300)" />
+          <p style={{ marginTop: '12px', fontSize: '15px' }}>Enter pickup + drop-off and search.</p>
+        </div>
       ) : sortedRides.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--asphalt-400)', fontFamily: 'var(--font-sans)' }}>
           <WpIcon name="car" size={40} color="var(--asphalt-300)" />
-          <p style={{ marginTop: '12px', fontSize: '15px' }}>No rides found nearby</p>
+          <p style={{ marginTop: '12px', fontSize: '15px' }}>No rides found nearby.</p>
+          <p style={{ marginTop: 4, fontSize: 12, color: 'var(--asphalt-300)' }}>
+            Try a different time or widen pickup search radius.
+          </p>
         </div>
       ) : (
-        sortedRides.map(ride => (
-          <div
-            key={ride.id}
-            onClick={() => isDesktop && setSelectedRide(ride.id === selectedRide ? null : ride.id)}
-            style={{
-              background: '#fff',
-              borderRadius: 'var(--radius-xl)',
-              padding: '16px',
-              boxShadow: isDesktop && selectedRide === ride.id ? 'var(--shadow-3)' : 'var(--shadow-2)',
-              border: `1px solid ${isDesktop && selectedRide === ride.id ? 'var(--ink-300)' : 'var(--asphalt-100)'}`,
-              cursor: isDesktop ? 'pointer' : 'default',
-              transition: 'all 0.15s',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <WpAvatar initials={getInitials(ride.driverName)} size={44} tone="ink" />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>
-                  {ride.driverName || 'Driver'}
+        sortedRides.map(ride => {
+          const id = ride.rideScheduleId;
+          const distKm = ride.distanceToPickupMeters != null
+            ? (Number(ride.distanceToPickupMeters) / 1000).toFixed(1) + ' km'
+            : null;
+          const detour = ride.detourPercent != null ? Math.round(Number(ride.detourPercent)) + '%' : null;
+          return (
+            <div
+              key={id}
+              onClick={() => isDesktop && setSelectedRide(id === selectedRide ? null : id)}
+              style={{
+                background: '#fff',
+                borderRadius: 'var(--radius-xl)',
+                padding: '16px',
+                boxShadow: isDesktop && selectedRide === id ? 'var(--shadow-3)' : 'var(--shadow-2)',
+                border: `1px solid ${isDesktop && selectedRide === id ? 'var(--ink-300)' : 'var(--asphalt-100)'}`,
+                cursor: isDesktop ? 'pointer' : 'default',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <WpAvatar initials={getInitials(ride.driverName)} size={44} tone="ink" />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>
+                    {ride.driverName || 'Driver'}
+                  </div>
+                  <StarRating value={ride.driverRating} />
                 </div>
-                <StarRating value={ride.rating} />
+                <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink-700)', fontFamily: 'var(--font-mono)' }}>
+                  ₹{ride.estimatedFare != null ? Number(ride.estimatedFare).toFixed(0) : '—'}
+                </div>
               </div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink-700)', fontFamily: 'var(--font-mono)' }}>
-                ₹{ride.fare || '—'}
+              <div style={{ marginBottom: '8px', fontSize: '13px', color: 'var(--asphalt-600)', fontFamily: 'var(--font-mono)' }}>
+                {ride.vehicleNumber || '—'} · {formatDeparture(ride.departureTime)}
               </div>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                {detour && <WpPill tone="warn">+{detour} detour</WpPill>}
+                {distKm && <WpPill tone="matched">{distKm} to pickup</WpPill>}
+                {ride.availableSeats != null && <WpPill tone="live">{ride.availableSeats} seat{ride.availableSeats !== 1 ? 's' : ''}</WpPill>}
+              </div>
+              <WpButton kind="primary" size="sm" full onClick={(e) => { e.stopPropagation(); handleRequest(ride); }} disabled={requesting === id}>
+                {requesting === id ? 'Requesting…' : 'Request ride'}
+              </WpButton>
             </div>
-            <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>
-              {ride.origin || 'Pickup'} → {ride.destination || 'Drop'}
-            </div>
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexWrap: 'wrap' }}>
-              {ride.detourMin != null && <WpPill tone="warn">+{ride.detourMin}min detour</WpPill>}
-              {ride.etaMin != null && <WpPill tone="matched">{ride.etaMin}min away</WpPill>}
-              {ride.seats != null && <WpPill tone="live">{ride.seats} seat{ride.seats !== 1 ? 's' : ''}</WpPill>}
-              {ride.distance && <WpPill tone="completed">{ride.distance}</WpPill>}
-            </div>
-            <WpButton kind="primary" size="sm" full onClick={(e) => { e.stopPropagation(); handleRequest(ride); }} disabled={requesting === ride.id}>
-              {requesting === ride.id ? 'Requesting…' : 'Request ride'}
-            </WpButton>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
@@ -188,10 +285,9 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', flex: 1, gap: 0, overflow: 'hidden', margin: '24px 40px 40px' }}>
-          {/* Left panel */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', paddingRight: '20px' }}>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', padding: '16px', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
-              <SearchInputs />
+              {SearchInputs()}
             </div>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', padding: '16px', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>Sort by</div>
@@ -200,7 +296,6 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
             <RideList />
           </div>
 
-          {/* Right panel — map illustration */}
           <div style={{ background: 'var(--ink-950)', borderRadius: 'var(--radius-2xl)', overflow: 'hidden', position: 'relative', minHeight: '500px' }}>
             <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
               <defs>
@@ -210,10 +305,6 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
               </defs>
               <rect width="800" height="600" fill="url(#grid)" />
               <path d="M100 500 Q 250 380 400 280 T 720 80" stroke="var(--voltage-400)" strokeWidth="3" fill="none" opacity="0.7" strokeLinecap="round" strokeDasharray="12 6" />
-              <path d="M0 480 H800" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-              <path d="M0 300 H800" stroke="rgba(255,255,255,0.04)" strokeWidth="5" />
-              <path d="M500 0 V600" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-              <path d="M200 0 V600" stroke="rgba(255,255,255,0.03)" strokeWidth="4" />
               <circle cx="100" cy="500" r="12" fill="rgba(255,255,255,0.3)" />
               <circle cx="100" cy="500" r="6" fill="#fff" />
               <circle cx="720" cy="80" r="16" fill="var(--voltage-400)" stroke="var(--ink-950)" strokeWidth="3" />
@@ -238,7 +329,7 @@ export default function MatchingScreen({ pickup, dropoff, onSelect, onBack }) {
       <WpAppBar title="Find a Ride" sub="Matching nearby drivers" onBack={onBack} />
 
       <div style={{ background: '#fff', padding: '16px', borderBottom: '1px solid var(--asphalt-100)' }}>
-        <SearchInputs />
+        {SearchInputs()}
       </div>
 
       <div style={{ padding: '12px 16px', background: '#fff', borderBottom: '1px solid var(--asphalt-100)', display: 'flex', gap: '8px', overflowX: 'auto' }}>

@@ -3,6 +3,7 @@ package com.carpooling.service.impl;
 import com.carpooling.common.exception.BusinessException;
 import com.carpooling.common.exception.ResourceNotFoundException;
 import com.carpooling.dto.request.RideRequestDto;
+import com.carpooling.dto.response.RideRequestResponse;
 import com.carpooling.entity.RideRequest;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.User;
@@ -41,13 +42,14 @@ public class RideRequestServiceImpl implements RideRequestService {
 
     @Override
     @Transactional
-    public RideRequest createRequest(Long passengerId, RideRequestDto dto) {
+    public RideRequestResponse createRequest(Long passengerId, RideRequestDto dto) {
         RideSchedule schedule = rideScheduleRepository.findById(dto.getRideScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("RideSchedule", dto.getRideScheduleId()));
         User passenger = userRepository.findById(passengerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", passengerId));
 
         userActivityService.assertNoActiveSchedule(passengerId);
+        userActivityService.assertNoOpenRequest(passengerId);
 
         if (schedule.getStatus() != ScheduleStatus.CREATED) {
             throw new BusinessException("Ride is not accepting requests");
@@ -62,18 +64,20 @@ public class RideRequestServiceImpl implements RideRequestService {
         Point pickup = GF.createPoint(new Coordinate(dto.getPickupLng(), dto.getPickupLat()));
         Point drop = GF.createPoint(new Coordinate(dto.getDropLng(), dto.getDropLat()));
 
-        return rideRequestRepository.save(RideRequest.builder()
+        RideRequest saved = rideRequestRepository.save(RideRequest.builder()
                 .rideSchedule(schedule)
                 .passenger(passenger)
                 .pickupLocation(pickup)
                 .dropLocation(drop)
                 .status(RequestStatus.PENDING)
                 .build());
+
+        return toResponse(saved);
     }
 
     @Override
     @Transactional
-    public RideRequest updateRequestStatus(Long requestId, Long driverId, RequestStatus newStatus) {
+    public RideRequestResponse updateRequestStatus(Long requestId, Long driverId, RequestStatus newStatus) {
         RideRequest request = rideRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("RideRequest", requestId));
 
@@ -101,16 +105,84 @@ public class RideRequestServiceImpl implements RideRequestService {
                     .build());
         }
 
-        return rideRequestRepository.save(request);
+        return toResponse(rideRequestRepository.save(request));
     }
 
     @Override
-    public List<RideRequest> getRequestsForRide(Long rideId) {
-        return rideRequestRepository.findByRideScheduleId(rideId);
+    @Transactional
+    public RideRequestResponse cancelByPassenger(Long requestId, Long passengerId) {
+        RideRequest request = rideRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("RideRequest", requestId));
+
+        if (!request.getPassenger().getId().equals(passengerId)) {
+            throw new BusinessException("Not authorized to cancel this request", HttpStatus.FORBIDDEN);
+        }
+        if (request.getStatus() == RequestStatus.CANCELLED) {
+            return toResponse(request);
+        }
+        if (request.getStatus() == RequestStatus.REJECTED) {
+            throw new BusinessException("Request was rejected by driver");
+        }
+
+        if (request.getStatus() == RequestStatus.ACCEPTED) {
+            RideSchedule schedule = request.getRideSchedule();
+            if (schedule.getStatus() == ScheduleStatus.STARTED || schedule.getStatus() == ScheduleStatus.COMPLETED) {
+                throw new BusinessException("Cannot cancel after ride has started");
+            }
+            schedule.setAvailableSeats((short) (schedule.getAvailableSeats() + 1));
+            rideScheduleRepository.save(schedule);
+            ridePassengerRepository.findByRideIdAndPassengerId(schedule.getId(), passengerId)
+                    .ifPresent(rp -> {
+                        rp.setStatus(PassengerStatus.CANCELLED);
+                        ridePassengerRepository.save(rp);
+                    });
+        }
+
+        request.setStatus(RequestStatus.CANCELLED);
+        return toResponse(rideRequestRepository.save(request));
     }
 
     @Override
-    public List<RideRequest> getPassengerRequests(Long passengerId) {
-        return rideRequestRepository.findByPassengerId(passengerId);
+    public List<RideRequestResponse> getRequestsForRide(Long rideId) {
+        return rideRequestRepository.findByRideScheduleId(rideId)
+                .stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    public List<RideRequestResponse> getPassengerRequests(Long passengerId) {
+        return rideRequestRepository.findByPassengerId(passengerId)
+                .stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    public List<RideRequestResponse> getRequestsForDriver(Long driverId) {
+        return rideRequestRepository.findAllByDriverId(driverId)
+                .stream().map(this::toResponse).toList();
+    }
+
+    private RideRequestResponse toResponse(RideRequest r) {
+        RideSchedule s = r.getRideSchedule();
+        Point p = r.getPickupLocation();
+        Point d = r.getDropLocation();
+        return RideRequestResponse.builder()
+                .id(r.getId())
+                .rideScheduleId(s != null ? s.getId() : null)
+                .passengerId(r.getPassenger() != null ? r.getPassenger().getId() : null)
+                .passengerName(r.getPassenger() != null ? r.getPassenger().getName() : null)
+                .pickupLat(p != null ? p.getY() : null)
+                .pickupLng(p != null ? p.getX() : null)
+                .dropLat(d != null ? d.getY() : null)
+                .dropLng(d != null ? d.getX() : null)
+                .status(r.getStatus() != null ? r.getStatus().name() : null)
+                .createdAt(r.getCreatedAt())
+                .driverId(s != null && s.getDriver() != null ? s.getDriver().getId() : null)
+                .driverName(s != null && s.getDriver() != null ? s.getDriver().getName() : null)
+                .vehicleNumber(s != null && s.getVehicle() != null ? s.getVehicle().getVehicleNumber() : null)
+                .pickupLabel(s != null ? s.getPickupLabel() : null)
+                .dropoffLabel(s != null ? s.getDropoffLabel() : null)
+                .departureTime(s != null ? s.getDepartureTime() : null)
+                .fare(s != null ? s.getFare() : null)
+                .scheduleStatus(s != null && s.getStatus() != null ? s.getStatus().name() : null)
+                .build();
     }
 }

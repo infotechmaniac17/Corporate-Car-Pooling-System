@@ -29,9 +29,24 @@ public class RideSchedule {
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "route_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "route_id")
     private Route route;
+
+    @Column(name = "pickup_location", columnDefinition = "geography(Point,4326)")
+    private org.locationtech.jts.geom.Point pickupLocation;
+
+    @Column(name = "pickup_label", length = 500)
+    private String pickupLabel;
+
+    @Column(name = "dropoff_location", columnDefinition = "geography(Point,4326)")
+    private org.locationtech.jts.geom.Point dropoffLocation;
+
+    @Column(name = "dropoff_label", length = 500)
+    private String dropoffLabel;
+
+    @Column(name = "fare", precision = 10, scale = 2)
+    private java.math.BigDecimal fare;
 
     @Column(name = "departure_time", nullable = false)
     private OffsetDateTime departureTime;

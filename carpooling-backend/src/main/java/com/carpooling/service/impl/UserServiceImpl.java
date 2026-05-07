@@ -151,7 +151,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getId(), selectedRole);
-        return new AuthResponse(token, user.getId(), user.getEmail(), selectedRole);
+        return new AuthResponse(token, user.getId(), user.getEmail(), selectedRole,
+                user.getDriverStatus().name(), user.getPassengerStatus().name());
     }
 
     @Override
@@ -187,9 +188,25 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResourceNotFoundException("User", userId);
         }
-        user.setName(request.getName().trim());
-        user.setPhone(request.getPhone().trim());
-        user.setGender(request.getGender());
+        if (request.getName() != null && !request.getName().isBlank()) {
+            user.setName(request.getName().trim());
+        }
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            user.setPhone(request.getPhone().trim());
+        }
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            user.setGender(request.getGender());
+        }
+        if (request.getHomeAddress() != null) {
+            user.setHomeAddress(request.getHomeAddress());
+            user.setHomeLat(request.getHomeLat());
+            user.setHomeLng(request.getHomeLng());
+        }
+        if (request.getSecondaryAddress() != null) {
+            user.setSecondaryAddress(request.getSecondaryAddress());
+            user.setSecondaryLat(request.getSecondaryLat());
+            user.setSecondaryLng(request.getSecondaryLng());
+        }
         return toResponse(userRepository.save(user));
     }
 
@@ -273,6 +290,12 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .isOnline(user.getIsOnline())
                 .driverStatus(user.getDriverStatus() != null ? user.getDriverStatus().name() : "NONE")
                 .passengerStatus(user.getPassengerStatus() != null ? user.getPassengerStatus().name() : "NONE")
+                .homeAddress(user.getHomeAddress())
+                .homeLat(user.getHomeLat())
+                .homeLng(user.getHomeLng())
+                .secondaryAddress(user.getSecondaryAddress())
+                .secondaryLat(user.getSecondaryLat())
+                .secondaryLng(user.getSecondaryLng())
                 .build();
     }
 }

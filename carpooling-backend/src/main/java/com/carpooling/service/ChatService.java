@@ -2,6 +2,7 @@ package com.carpooling.service;
 
 import com.carpooling.dto.request.SendMessageRequest;
 import com.carpooling.dto.response.ChatMessageResponse;
+import com.carpooling.dto.response.ChatPartnerResponse;
 import com.carpooling.entity.ChatMessage;
 
 import java.util.List;
@@ -11,4 +12,5 @@ public interface ChatService {
     List<ChatMessageResponse> getMessages(Long rideId);
     void markMessagesRead(Long rideId, Long userId);
     long getUnreadCount(Long rideId, Long userId);
+    List<ChatPartnerResponse> getPartners(Long rideId, Long userId);
 }

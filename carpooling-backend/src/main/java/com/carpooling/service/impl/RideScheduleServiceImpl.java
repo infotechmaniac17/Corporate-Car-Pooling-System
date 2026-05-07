@@ -9,6 +9,10 @@ import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.Route;
 import com.carpooling.entity.User;
 import com.carpooling.entity.Vehicle;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.entity.RidePassenger;
 import com.carpooling.enums.PassengerStatus;
@@ -24,6 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -37,6 +42,8 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     private final RidePassengerRepository ridePassengerRepository;
     private final UserActivityService userActivityService;
 
+    private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
+
     @Override
     @Transactional
     public RideScheduleResponse createSchedule(Long driverId, CreateRideScheduleRequest request) {
@@ -44,8 +51,6 @@ public class RideScheduleServiceImpl implements RideScheduleService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", driverId));
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", request.getVehicleId()));
-        Route route = routeRepository.findById(request.getRouteId())
-                .orElseThrow(() -> new ResourceNotFoundException("Route", request.getRouteId()));
 
         if (!vehicle.getDriver().getId().equals(driverId)) {
             throw new BusinessException("Vehicle does not belong to this driver", HttpStatus.FORBIDDEN);
@@ -53,13 +58,31 @@ public class RideScheduleServiceImpl implements RideScheduleService {
 
         userActivityService.assertNoOpenRequest(driverId);
 
+        if (rideScheduleRepository.existsByDriverIdAndStatusIn(driverId,
+                java.util.List.of(ScheduleStatus.CREATED, ScheduleStatus.ACTIVE, ScheduleStatus.STARTED))) {
+            throw new BusinessException(
+                    "You already have an open ride. Cancel or complete it before creating another.",
+                    org.springframework.http.HttpStatus.CONFLICT);
+        }
+
+        Point pickup = GF.createPoint(new Coordinate(request.getPickupLng(), request.getPickupLat()));
+        Point dropoff = GF.createPoint(new Coordinate(request.getDropoffLng(), request.getDropoffLat()));
+
+        BigDecimal detour = request.getDetourLimitPercent() != null
+                ? request.getDetourLimitPercent()
+                : BigDecimal.valueOf(20.00);
+
         RideSchedule schedule = RideSchedule.builder()
                 .driver(driver)
                 .vehicle(vehicle)
-                .route(route)
+                .pickupLocation(pickup)
+                .pickupLabel(request.getPickupLabel())
+                .dropoffLocation(dropoff)
+                .dropoffLabel(request.getDropoffLabel())
+                .fare(request.getFare())
                 .departureTime(request.getDepartureTime())
                 .availableSeats(request.getAvailableSeats())
-                .detourLimitPercent(request.getDetourLimitPercent())
+                .detourLimitPercent(detour)
                 .genderPreference(request.getGenderPreference())
                 .status(ScheduleStatus.CREATED)
                 .build();
@@ -76,7 +99,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
 
     @Override
     public List<RideScheduleResponse> getDriverSchedules(Long driverId) {
-        return rideScheduleRepository.findByDriverIdAndStatus(driverId, null)
+        return rideScheduleRepository.findByDriverIdOrderByDepartureTimeDesc(driverId)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -147,6 +170,8 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     }
 
     private RideScheduleResponse toResponse(RideSchedule s) {
+        Point pickup = s.getPickupLocation();
+        Point dropoff = s.getDropoffLocation();
         return RideScheduleResponse.builder()
                 .id(s.getId())
                 .driverId(s.getDriver().getId())
@@ -155,7 +180,14 @@ public class RideScheduleServiceImpl implements RideScheduleService {
                 .vehicleId(s.getVehicle().getId())
                 .vehicleNumber(s.getVehicle().getVehicleNumber())
                 .vehicleCapacity(s.getVehicle().getCapacity())
-                .routeId(s.getRoute().getId())
+                .routeId(s.getRoute() != null ? s.getRoute().getId() : null)
+                .pickupLat(pickup != null ? pickup.getY() : null)
+                .pickupLng(pickup != null ? pickup.getX() : null)
+                .pickupLabel(s.getPickupLabel())
+                .dropoffLat(dropoff != null ? dropoff.getY() : null)
+                .dropoffLng(dropoff != null ? dropoff.getX() : null)
+                .dropoffLabel(s.getDropoffLabel())
+                .fare(s.getFare())
                 .departureTime(s.getDepartureTime())
                 .availableSeats(s.getAvailableSeats())
                 .detourLimitPercent(s.getDetourLimitPercent())

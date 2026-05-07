@@ -26,7 +26,7 @@ export function AuthProvider({ children }) {
   const isDriver = currentUser?.role === 'DRIVER' || currentUser?.role === 'BOTH';
   const isAdmin = currentUser?.role === 'ADMIN';
   const isPendingDriver = currentUser?.driverStatus === 'PENDING';
-  const isBothRole = currentUser?.role === 'BOTH';
+  const isBothRole = currentUser?.driverStatus === 'APPROVED' && currentUser?.passengerStatus === 'APPROVED';
 
   const setActiveMode = useCallback((mode) => {
     localStorage.setItem('wp_active_mode', mode);
@@ -56,8 +56,8 @@ export function AuthProvider({ children }) {
   const confirmRole = useCallback(async (selectedRole) => {
     if (!pendingRoleSelection) return;
     const res = await authApi.selectRole(pendingRoleSelection.userId, selectedRole);
-    const { token: jwt, userId, email: userEmail, role } = res.data.data;
-    const user = { id: userId, email: userEmail, role };
+    const { token: jwt, userId, email: userEmail, role, driverStatus, passengerStatus } = res.data.data;
+    const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
     const mode = defaultModeForRole(role);
     localStorage.setItem('wp_token', jwt);
     localStorage.setItem('wp_user', JSON.stringify(user));

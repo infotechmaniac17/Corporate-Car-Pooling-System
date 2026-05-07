@@ -3,7 +3,7 @@ package com.carpooling.controller;
 import com.carpooling.common.ApiResponse;
 import com.carpooling.config.JwtUtil;
 import com.carpooling.dto.request.RideRequestDto;
-import com.carpooling.entity.RideRequest;
+import com.carpooling.dto.response.RideRequestResponse;
 import com.carpooling.enums.RequestStatus;
 import com.carpooling.service.RideRequestService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +24,7 @@ public class RideRequestController {
     private final JwtUtil jwtUtil;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<RideRequest>> createRequest(
+    public ResponseEntity<ApiResponse<RideRequestResponse>> createRequest(
             @Valid @RequestBody RideRequestDto dto,
             HttpServletRequest httpRequest) {
         Long passengerId = extractUserId(httpRequest);
@@ -33,7 +33,7 @@ public class RideRequestController {
     }
 
     @PatchMapping("/{requestId}/status")
-    public ResponseEntity<ApiResponse<RideRequest>> updateStatus(
+    public ResponseEntity<ApiResponse<RideRequestResponse>> updateStatus(
             @PathVariable Long requestId,
             @RequestParam RequestStatus status,
             HttpServletRequest httpRequest) {
@@ -43,16 +43,32 @@ public class RideRequestController {
     }
 
     @GetMapping("/ride/{rideId}")
-    public ResponseEntity<ApiResponse<List<RideRequest>>> getRequestsForRide(
+    public ResponseEntity<ApiResponse<List<RideRequestResponse>>> getRequestsForRide(
             @PathVariable Long rideId) {
         return ResponseEntity.ok(ApiResponse.ok(rideRequestService.getRequestsForRide(rideId)));
     }
 
     @GetMapping("/my")
-    public ResponseEntity<ApiResponse<List<RideRequest>>> getMyRequests(
+    public ResponseEntity<ApiResponse<List<RideRequestResponse>>> getMyRequests(
             HttpServletRequest httpRequest) {
         Long passengerId = extractUserId(httpRequest);
         return ResponseEntity.ok(ApiResponse.ok(rideRequestService.getPassengerRequests(passengerId)));
+    }
+
+    @GetMapping("/driver/my")
+    public ResponseEntity<ApiResponse<List<RideRequestResponse>>> getRequestsForMyRides(
+            HttpServletRequest httpRequest) {
+        Long driverId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(rideRequestService.getRequestsForDriver(driverId)));
+    }
+
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<ApiResponse<RideRequestResponse>> cancelMyRequest(
+            @PathVariable Long requestId,
+            HttpServletRequest httpRequest) {
+        Long passengerId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(
+                rideRequestService.cancelByPassenger(requestId, passengerId)));
     }
 
     private Long extractUserId(HttpServletRequest request) {

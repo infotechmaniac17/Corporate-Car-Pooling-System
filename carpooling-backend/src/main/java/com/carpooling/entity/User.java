@@ -71,6 +71,24 @@ public class User {
     @Builder.Default
     private VerificationStatus passengerStatus = VerificationStatus.NONE;
 
+    @Column(name = "home_address", length = 500)
+    private String homeAddress;
+
+    @Column(name = "home_lat")
+    private Double homeLat;
+
+    @Column(name = "home_lng")
+    private Double homeLng;
+
+    @Column(name = "secondary_address", length = 500)
+    private String secondaryAddress;
+
+    @Column(name = "secondary_lat")
+    private Double secondaryLat;
+
+    @Column(name = "secondary_lng")
+    private Double secondaryLng;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

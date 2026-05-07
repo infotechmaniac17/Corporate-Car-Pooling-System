@@ -6,11 +6,17 @@ export const getMyRequests = () =>
 export const getDriverRequests = (rideId) =>
   api.get(`/rides/requests/ride/${rideId}`);
 
+export const getAllDriverRequests = () =>
+  api.get('/rides/requests/driver/my');
+
 export const updateRequestStatus = (id, status) =>
   api.patch(`/rides/requests/${id}/status?status=${status}`);
 
 export const createRequest = (data) =>
   api.post('/rides/requests', data);
+
+export const cancelMyRequest = (requestId) =>
+  api.delete(`/rides/requests/${requestId}`);
 
 export const getSchedule = (id) =>
   api.get(`/rides/schedules/driver/${id}`);

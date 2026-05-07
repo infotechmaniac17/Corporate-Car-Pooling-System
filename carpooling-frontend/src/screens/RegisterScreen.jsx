@@ -326,7 +326,7 @@ export default function RegisterScreen() {
         setLoading(false);
         return;
       }
-      navigate('/home');
+      navigate('/setup-address');
     } catch (err) {
       setError(err?.response?.data?.message || 'Registration failed. Please try again.');
     } finally {

@@ -4,6 +4,7 @@ import com.carpooling.common.ApiResponse;
 import com.carpooling.config.JwtUtil;
 import com.carpooling.dto.request.SendMessageRequest;
 import com.carpooling.dto.response.ChatMessageResponse;
+import com.carpooling.dto.response.ChatPartnerResponse;
 import com.carpooling.entity.ChatMessage;
 import com.carpooling.service.ChatService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +46,14 @@ public class ChatController {
         Long userId = extractUserId(httpRequest);
         chatService.markMessagesRead(rideId, userId);
         return ResponseEntity.ok(ApiResponse.ok("Messages marked as read", null));
+    }
+
+    @GetMapping("/ride/{rideId}/partners")
+    public ResponseEntity<ApiResponse<List<ChatPartnerResponse>>> getPartners(
+            @PathVariable Long rideId,
+            HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(chatService.getPartners(rideId, userId)));
     }
 
     @GetMapping("/ride/{rideId}/unread")

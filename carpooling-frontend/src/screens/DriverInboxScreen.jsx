@@ -7,7 +7,7 @@ import WpPill from '../components/WpPill';
 import WpButton from '../components/WpButton';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { getDriverRequests, updateRequestStatus } from '../api/rides';
+import { getDriverRequests, getAllDriverRequests, updateRequestStatus } from '../api/rides';
 
 function getInitials(name) {
   if (!name) return '?';
@@ -35,9 +35,12 @@ export default function DriverInboxScreen({ rideId }) {
   const resolvedRideId = rideId;
 
   useEffect(() => {
-    if (!resolvedRideId) { setLoading(false); return; }
-    getDriverRequests(resolvedRideId)
-      .then(res => setRequests(res.data || []))
+    setLoading(true);
+    const promise = resolvedRideId
+      ? getDriverRequests(resolvedRideId)
+      : getAllDriverRequests();
+    promise
+      .then(res => setRequests(res.data?.data || []))
       .catch(() => setRequests([]))
       .finally(() => setLoading(false));
   }, [resolvedRideId]);
@@ -75,12 +78,12 @@ export default function DriverInboxScreen({ rideId }) {
         <div style={{ padding: '10px 12px', background: 'var(--asphalt-50)', borderRadius: 'var(--radius-md)', marginBottom: '12px', fontSize: '13px', color: 'var(--asphalt-700)', fontFamily: 'var(--font-sans)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ink-500)', flexShrink: 0 }} />
-            {req.pickupLocation || 'Pickup'}
+            {req.pickupLabel || req.pickupLocation || 'Pickup'}
           </div>
           <div style={{ width: 1, height: 10, background: 'var(--asphalt-300)', margin: '2px 3px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: 7, height: 7, borderRadius: '2px', background: 'var(--voltage-400)', flexShrink: 0 }} />
-            {req.dropoffLocation || 'Dropoff'}
+            {req.dropoffLabel || req.dropoffLocation || 'Dropoff'}
           </div>
         </div>
 
@@ -88,7 +91,7 @@ export default function DriverInboxScreen({ rideId }) {
           {req.detourKm != null && <WpPill tone="warn">+{req.detourKm}km detour</WpPill>}
           {req.distanceKm != null && <WpPill tone="matched">{req.distanceKm}km away</WpPill>}
           {req.status && req.status !== 'PENDING' && (
-            <WpPill tone={req.status === 'ACCEPTED' ? 'live' : req.status === 'DECLINED' ? 'cancelled' : 'matched'}>
+            <WpPill tone={req.status === 'ACCEPTED' ? 'live' : req.status === 'REJECTED' ? 'cancelled' : 'matched'}>
               {req.status}
             </WpPill>
           )}
@@ -96,14 +99,14 @@ export default function DriverInboxScreen({ rideId }) {
 
         {isPending && !isActing ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <WpButton kind="danger" size="sm" full onClick={() => handleAction(req.id, 'DECLINED')}>Decline</WpButton>
+            <WpButton kind="danger" size="sm" full onClick={() => handleAction(req.id, 'REJECTED')}>Decline</WpButton>
             <WpButton kind="accent" size="sm" full onClick={() => handleAction(req.id, 'ACCEPTED')}>Accept</WpButton>
           </div>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             {req.status === 'ACCEPTED' || actionState === 'ACCEPTED' ? (
               <WpPill tone="live">Accepted</WpPill>
-            ) : req.status === 'DECLINED' || actionState === 'DECLINED' ? (
+            ) : req.status === 'REJECTED' || actionState === 'REJECTED' ? (
               <WpPill tone="cancelled">Declined</WpPill>
             ) : (
               <span style={{ fontSize: '13px', color: 'var(--asphalt-400)', fontFamily: 'var(--font-sans)' }}>Processing…</span>
@@ -139,7 +142,7 @@ export default function DriverInboxScreen({ rideId }) {
 
         <div style={{ padding: '24px 40px 40px' }}>
           {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px', maxWidth: 1200 }}>
               {[1, 2, 3].map(i => (
                 <div key={i} style={{ height: '220px', borderRadius: 'var(--radius-lg)', background: 'linear-gradient(90deg, var(--asphalt-100) 25%, var(--asphalt-50) 50%, var(--asphalt-100) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
               ))}
@@ -149,7 +152,7 @@ export default function DriverInboxScreen({ rideId }) {
               <EmptyState />
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px', maxWidth: 1200 }}>
               {requests.map(req => <RequestCard key={req.id} req={req} />)}
             </div>
           )}

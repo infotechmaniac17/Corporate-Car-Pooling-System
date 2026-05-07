@@ -63,6 +63,14 @@ export default function PaymentsScreen() {
   const totalPaid = MOCK_PAYMENTS.filter(t => t.status === 'PAID').reduce((s, t) => s + parseInt(t.amount.replace(/[₹,]/g, '')), 0);
   const pending = MOCK_PAYMENTS.filter(t => t.status === 'PENDING').length;
 
+  const byMethod = MOCK_PAYMENTS.filter(t => t.status === 'PAID').reduce((acc, t) => {
+    const amount = parseInt(t.amount.replace(/[₹,]/g, ''));
+    acc[t.method] = (acc[t.method] || 0) + amount;
+    return acc;
+  }, {});
+  const driverRides = MOCK_PAYMENTS.reduce((acc, t) => { acc[t.driver] = (acc[t.driver] || 0) + 1; return acc; }, {});
+  const topDriver = Object.entries(driverRides).sort((a, b) => b[1] - a[1])[0];
+
   const FilterBar = () => (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {filters.map(f => (
@@ -103,8 +111,10 @@ export default function PaymentsScreen() {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em' }}>Payments</h1>
           <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Fare history and pending payments</p>
         </div>
-        <div style={{ padding: '24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ padding: '20px 40px 0' }}>
           <SummaryRow />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, padding: '20px 40px 40px', alignItems: 'start' }}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)' }}>Transaction history</h2>
@@ -113,6 +123,38 @@ export default function PaymentsScreen() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {shown.map(t => <TxnCard key={t.id} txn={t} />)}
             </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>By payment method</div>
+              {Object.entries(byMethod).map(([method, amount]) => (
+                <div key={method} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: 'var(--ink-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <WpIcon name="wallet" size={14} color="var(--ink-600)" />
+                    </div>
+                    <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{method}</span>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>₹{amount.toLocaleString('en-IN')}</span>
+                </div>
+              ))}
+            </div>
+            {topDriver && (
+              <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 14 }}>Most frequent driver</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--ink-950)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--voltage-400)', fontFamily: 'var(--font-mono)' }}>
+                      {topDriver[0].split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)' }}>{topDriver[0]}</div>
+                    <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>{topDriver[1]} rides together</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

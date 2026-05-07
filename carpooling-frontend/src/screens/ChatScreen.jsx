@@ -6,7 +6,7 @@ import WpIcon from '../components/WpIcon';
 import WpPill from '../components/WpPill';
 import WpAvatar from '../components/WpAvatar';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { getMessages, sendMessage, markRead } from '../api/chat';
+import { getMessages, sendMessage, markRead, getPartners } from '../api/chat';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -26,6 +26,7 @@ export default function ChatScreen({ rideId, onBack }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [driverName, setDriverName] = useState('Driver');
+  const [partnerPhone, setPartnerPhone] = useState('');
   const listRef = useRef(null);
 
   const resolvedRideId = rideId;
@@ -40,6 +41,16 @@ export default function ChatScreen({ rideId, onBack }) {
         markRead(resolvedRideId).catch(() => {});
       })
       .catch(() => setMessages([]));
+
+    getPartners(resolvedRideId)
+      .then(res => {
+        const partners = res.data?.data || res.data || [];
+        if (partners.length > 0) {
+          setDriverName(partners[0].name || 'Driver');
+          setPartnerPhone(partners[0].phone || '');
+        }
+      })
+      .catch(() => {});
   }, [resolvedRideId]);
 
   useEffect(() => {
@@ -143,9 +154,11 @@ export default function ChatScreen({ rideId, onBack }) {
               <div style={{ fontSize: '12px', color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>In ride</div>
             </div>
             <WpPill tone="live">En route</WpPill>
-            <a href="tel:" style={{ color: 'var(--ink-600)', display: 'flex', alignItems: 'center', marginLeft: '8px' }}>
-              <WpIcon name="phone" size={22} color="var(--ink-600)" />
-            </a>
+            {partnerPhone && (
+              <a href={`tel:${partnerPhone}`} style={{ color: 'var(--ink-600)', display: 'flex', alignItems: 'center', marginLeft: '8px' }} title={`Call ${driverName}`}>
+                <WpIcon name="phone" size={22} color="var(--ink-600)" />
+              </a>
+            )}
           </div>
 
           <MessageList />
@@ -162,9 +175,11 @@ export default function ChatScreen({ rideId, onBack }) {
         sub="In ride"
         onBack={onBack || (() => navigate(-1))}
         trailing={
-          <a href="tel:" style={{ color: 'var(--ink-600)', display: 'flex', alignItems: 'center' }}>
-            <WpIcon name="phone" size={22} color="var(--ink-600)" />
-          </a>
+          partnerPhone ? (
+            <a href={`tel:${partnerPhone}`} style={{ color: 'var(--ink-600)', display: 'flex', alignItems: 'center' }} title={`Call ${driverName}`}>
+              <WpIcon name="phone" size={22} color="var(--ink-600)" />
+            </a>
+          ) : null
         }
       />
       <div style={{ padding: '8px 16px', background: '#fff', borderBottom: '1px solid var(--asphalt-100)', display: 'flex', justifyContent: 'center' }}>

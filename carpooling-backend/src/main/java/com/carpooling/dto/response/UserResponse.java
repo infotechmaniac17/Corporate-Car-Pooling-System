@@ -19,4 +19,10 @@ public class UserResponse {
     private Boolean isOnline;
     private String driverStatus;
     private String passengerStatus;
+    private String homeAddress;
+    private Double homeLat;
+    private Double homeLng;
+    private String secondaryAddress;
+    private Double secondaryLat;
+    private Double secondaryLng;
 }

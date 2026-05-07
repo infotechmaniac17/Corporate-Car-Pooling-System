@@ -7,6 +7,7 @@ import WpButton from '../components/WpButton';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getLatest } from '../api/tracking';
+import { getPartners } from '../api/chat';
 
 function getInitials(name) {
   if (!name) return '?';
@@ -18,6 +19,7 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
   const isDesktop = useIsDesktop();
   const [tracking, setTracking] = useState(null);
   const [driverPos, setDriverPos] = useState(0.2);
+  const [partner, setPartner] = useState(null);
   const intervalRef = useRef(null);
 
   const resolvedRideId = rideId;
@@ -35,10 +37,20 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
 
     fetchTracking();
     intervalRef.current = setInterval(fetchTracking, 5000);
+
+    if (resolvedRideId) {
+      getPartners(resolvedRideId)
+        .then(res => {
+          const list = res.data?.data || res.data || [];
+          if (list.length > 0) setPartner(list[0]);
+        })
+        .catch(() => {});
+    }
     return () => clearInterval(intervalRef.current);
   }, [resolvedRideId]);
 
-  const driverName = tracking?.driverName || 'Driver';
+  const driverName = partner?.name || tracking?.driverName || 'Driver';
+  const partnerPhone = partner?.phone || tracking?.driverPhone || '';
   const vehicleInfo = tracking?.vehiclePlate || tracking?.vehicle || 'KA 01 AB 1234';
   const etaMin = tracking?.etaMinutes ?? 8;
 
@@ -113,10 +125,12 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
                 <WpIcon name="message" size={18} color="var(--ink-600)" /> Chat
               </button>
               <a
-                href={`tel:${tracking?.driverPhone || ''}`}
-                style={{ padding: '13px 16px', borderRadius: 'var(--radius-lg)', background: 'var(--success-100)', border: '1.5px solid rgba(24,169,87,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--success-700)', fontFamily: 'var(--font-sans)', textDecoration: 'none' }}
+                href={partnerPhone ? `tel:${partnerPhone}` : undefined}
+                onClick={e => { if (!partnerPhone) e.preventDefault(); }}
+                style={{ padding: '13px 16px', borderRadius: 'var(--radius-lg)', background: partnerPhone ? 'var(--success-100)' : 'var(--asphalt-100)', border: `1.5px solid ${partnerPhone ? 'rgba(24,169,87,0.2)' : 'var(--asphalt-200)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: partnerPhone ? 'var(--success-700)' : 'var(--asphalt-400)', fontFamily: 'var(--font-sans)', textDecoration: 'none', cursor: partnerPhone ? 'pointer' : 'not-allowed', opacity: partnerPhone ? 1 : 0.6 }}
+                title={partnerPhone ? `Call ${driverName}` : 'Call available once ride starts'}
               >
-                <WpIcon name="phone" size={18} color="var(--success-700)" /> Call
+                <WpIcon name="phone" size={18} color={partnerPhone ? 'var(--success-700)' : 'var(--asphalt-400)'} /> Call
               </a>
             </div>
             <button

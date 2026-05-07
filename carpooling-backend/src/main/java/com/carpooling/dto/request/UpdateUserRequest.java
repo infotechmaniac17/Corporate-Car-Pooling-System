@@ -1,14 +1,19 @@
 package com.carpooling.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class UpdateUserRequest {
-    @NotBlank
+    // All fields optional — only present fields will be updated (PATCH semantics)
     private String name;
-    @NotBlank
     private String phone;
-    @NotBlank
     private String gender;
+
+    // Address fields — all optional
+    private String homeAddress;
+    private Double homeLat;
+    private Double homeLng;
+    private String secondaryAddress;
+    private Double secondaryLat;
+    private Double secondaryLng;
 }

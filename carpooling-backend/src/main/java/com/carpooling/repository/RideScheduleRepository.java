@@ -14,6 +14,8 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
 
     List<RideSchedule> findByDriverIdAndStatus(Long driverId, ScheduleStatus status);
 
+    List<RideSchedule> findByDriverIdOrderByDepartureTimeDesc(Long driverId);
+
     boolean existsByDriverIdAndStatusIn(Long driverId, Collection<ScheduleStatus> statuses);
 
     boolean existsByDriverIdAndStatus(Long driverId, ScheduleStatus status);
@@ -37,7 +39,7 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
         SELECT rs FROM RideSchedule rs
         JOIN FETCH rs.driver
         JOIN FETCH rs.vehicle
-        JOIN FETCH rs.route
+        LEFT JOIN FETCH rs.route
         WHERE rs.id = :id
         """)
     java.util.Optional<RideSchedule> findByIdWithDetails(@Param("id") Long id);

@@ -8,3 +8,6 @@ export const sendMessage = (data) =>
 
 export const markRead = (rideId) =>
   api.patch(`/chat/ride/${rideId}/read`);
+
+export const getPartners = (rideId) =>
+  api.get(`/chat/ride/${rideId}/partners`);
