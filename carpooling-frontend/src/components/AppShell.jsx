@@ -7,6 +7,7 @@ import WpAvatar from './WpAvatar';
 const RIDER_NAV = [
   { id: 'home',     label: 'Home',        icon: 'home',    path: '/home' },
   { id: 'match',    label: 'Find a ride', icon: 'search',  path: '/match' },
+  { id: 'trips',    label: 'My trips',    icon: 'car',     path: '/my-trips' },
   { id: 'payments', label: 'Payments',    icon: 'wallet',  path: '/payments' },
   { id: 'profile',  label: 'Profile',     icon: 'user',    path: '/profile' },
 ];

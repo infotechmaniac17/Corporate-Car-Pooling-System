@@ -8,10 +8,10 @@ import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getSchedule } from '../api/rides';
 
-const STATUS_TONE = { SCHEDULED: 'matched', LIVE: 'live', COMPLETED: 'completed', CANCELLED: 'cancelled' };
+const STATUS_TONE = { CREATED: 'matched', ACTIVE: 'matched', STARTED: 'live', COMPLETED: 'completed', CANCELLED: 'cancelled' };
 
 function RideCard({ ride, onViewRequests }) {
-  const scheduled = ride.scheduledTime ? new Date(ride.scheduledTime) : null;
+  const scheduled = ride.departureTime ? new Date(ride.departureTime) : null;
   const timeStr = scheduled
     ? scheduled.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '—';
@@ -25,25 +25,25 @@ function RideCard({ ride, onViewRequests }) {
       boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3 }}>
-            {ride.pickupLocation || 'Home'} → {ride.dropoffLocation || 'Office'}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {ride.pickupLabel || 'Pickup'} → {ride.dropoffLabel || 'Drop-off'}
           </div>
           <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
             {dateStr} · {timeStr}
           </div>
         </div>
-        <WpPill tone={STATUS_TONE[ride.status] || 'matched'}>{ride.status || 'SCHEDULED'}</WpPill>
+        <WpPill tone={STATUS_TONE[ride.status] || 'matched'}>{ride.status || 'CREATED'}</WpPill>
       </div>
 
       <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <WpIcon name="users" size={14} color="var(--asphalt-500)" />
           <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-mono)' }}>
-            {ride.bookedSeats || 0} / {ride.availableSeats || 4} seats
+            {ride.availableSeats || 0} seats free
           </span>
         </div>
-        {ride.fare && (
+        {ride.fare != null && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <WpIcon name="wallet" size={14} color="var(--asphalt-500)" />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-800)', fontFamily: 'var(--font-mono)' }}>

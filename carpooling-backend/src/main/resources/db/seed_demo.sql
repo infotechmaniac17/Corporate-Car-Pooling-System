@@ -11,8 +11,8 @@ DELETE FROM ride_requests   WHERE passenger_id IN (SELECT id FROM users WHERE em
 DELETE FROM chat_messages   WHERE ride_id IN (SELECT id FROM ride_schedules WHERE driver_id IN (SELECT id FROM users WHERE email LIKE '%@acme.com'));
 DELETE FROM ride_schedules  WHERE driver_id IN (SELECT id FROM users WHERE email LIKE '%@acme.com');
 DELETE FROM vehicles        WHERE driver_id IN (SELECT id FROM users WHERE email LIKE '%@acme.com');
-DELETE FROM ratings         WHERE rater_id  IN (SELECT id FROM users WHERE email LIKE '%@acme.com')
-                               OR ratee_id  IN (SELECT id FROM users WHERE email LIKE '%@acme.com');
+DELETE FROM ratings         WHERE given_by  IN (SELECT id FROM users WHERE email LIKE '%@acme.com')
+                               OR given_to  IN (SELECT id FROM users WHERE email LIKE '%@acme.com');
 DELETE FROM guardian_contacts WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@acme.com');
 DELETE FROM users           WHERE email LIKE '%@acme.com';
 DELETE FROM organisations   WHERE domain = 'acme.com';

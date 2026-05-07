@@ -106,14 +106,23 @@ public class RidePassengerServiceImpl implements RidePassengerService {
     }
 
     private RidePassengerResponse toResponse(RidePassenger rp) {
+        RideSchedule ride = rp.getRide();
         return RidePassengerResponse.builder()
                 .id(rp.getId())
-                .rideId(rp.getRide().getId())
+                .rideId(ride.getId())
                 .passengerId(rp.getPassenger().getId())
                 .passengerName(rp.getPassenger().getName())
                 .passengerEmail(rp.getPassenger().getEmail())
                 .status(rp.getStatus().name())
                 .joinedAt(rp.getJoinedAt())
+                .driverId(ride.getDriver() != null ? ride.getDriver().getId() : null)
+                .driverName(ride.getDriver() != null ? ride.getDriver().getName() : null)
+                .vehicleNumber(ride.getVehicle() != null ? ride.getVehicle().getVehicleNumber() : null)
+                .pickupLabel(ride.getPickupLabel())
+                .dropoffLabel(ride.getDropoffLabel())
+                .departureTime(ride.getDepartureTime())
+                .fare(ride.getFare())
+                .scheduleStatus(ride.getStatus() != null ? ride.getStatus().name() : null)
                 .build();
     }
 }

@@ -25,6 +25,7 @@ import AppShell from './components/AppShell';
 import PendingApprovalScreen from './screens/PendingApprovalScreen';
 import DriverApplicationScreen from './screens/DriverApplicationScreen';
 import AddressSetupScreen from './screens/AddressSetupScreen';
+import PassengerTripsScreen from './screens/PassengerTripsScreen';
 
 // ─── Mode-switch blocker modal ────────────────────────────────────────────────
 
@@ -189,6 +190,7 @@ export default function App() {
       <Route path="/driver/vehicles"           element={<U driverOnly activityState={activityState}><DriverVehiclesScreen /></U>} />
       <Route path="/profile"                   element={<U activityState={activityState}><ProfileScreen activityState={activityState} /></U>} />
       <Route path="/payments"                  element={<U activityState={activityState}><PaymentsScreen /></U>} />
+      <Route path="/my-trips"                  element={<U activityState={activityState}><PassengerTripsScreen /></U>} />
       <Route path="/pending-approval"          element={<U activityState={activityState}><PendingApprovalScreen /></U>} />
       <Route path="/become-driver"             element={<U activityState={activityState}><DriverApplicationScreen /></U>} />
       <Route path="/setup-address"             element={<U activityState={activityState}><AddressSetupScreen /></U>} />
