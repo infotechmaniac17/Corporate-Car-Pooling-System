@@ -75,12 +75,12 @@ export default function DriverInboxScreen({ rideId }) {
         <div style={{ padding: '10px 12px', background: 'var(--asphalt-50)', borderRadius: 'var(--radius-md)', marginBottom: '12px', fontSize: '13px', color: 'var(--asphalt-700)', fontFamily: 'var(--font-sans)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ink-500)', flexShrink: 0 }} />
-            {req.pickupLocation || 'Pickup'}
+            {req.pickupLabel || req.pickupLocation || 'Pickup'}
           </div>
           <div style={{ width: 1, height: 10, background: 'var(--asphalt-300)', margin: '2px 3px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: 7, height: 7, borderRadius: '2px', background: 'var(--voltage-400)', flexShrink: 0 }} />
-            {req.dropoffLocation || 'Dropoff'}
+            {req.dropoffLabel || req.dropoffLocation || 'Dropoff'}
           </div>
         </div>
 

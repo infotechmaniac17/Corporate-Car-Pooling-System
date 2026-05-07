@@ -173,8 +173,7 @@ export default function PassengerTripsScreen() {
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {pendingRequests.map(r => {
-              const ride = r.rideSchedule || {};
-              const dep = ride.departureTime ? new Date(ride.departureTime) : null;
+              const dep = r.departureTime ? new Date(r.departureTime) : null;
               const when = dep
                 ? `${dep.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · ${dep.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                 : '—';
@@ -186,10 +185,10 @@ export default function PassengerTripsScreen() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3 }}>
-                        {ride.pickupLabel || 'Pickup'} → {ride.dropoffLabel || 'Drop-off'}
+                        {r.pickupLabel || 'Pickup'} → {r.dropoffLabel || 'Drop-off'}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
-                        {when} · driver {ride.driver?.name || ride.driverName || '—'}
+                        {when} · driver {r.driverName || '—'}
                       </div>
                     </div>
                     <WpPill tone={r.status === 'ACCEPTED' ? 'live' : 'matched'}>{r.status}</WpPill>
