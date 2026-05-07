@@ -58,6 +58,13 @@ public class RideScheduleServiceImpl implements RideScheduleService {
 
         userActivityService.assertNoOpenRequest(driverId);
 
+        if (rideScheduleRepository.existsByDriverIdAndStatusIn(driverId,
+                java.util.List.of(ScheduleStatus.CREATED, ScheduleStatus.ACTIVE, ScheduleStatus.STARTED))) {
+            throw new BusinessException(
+                    "You already have an open ride. Cancel or complete it before creating another.",
+                    org.springframework.http.HttpStatus.CONFLICT);
+        }
+
         Point pickup = GF.createPoint(new Coordinate(request.getPickupLng(), request.getPickupLat()));
         Point dropoff = GF.createPoint(new Coordinate(request.getDropoffLng(), request.getDropoffLat()));
 

@@ -48,6 +48,7 @@ public class RideRequestServiceImpl implements RideRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", passengerId));
 
         userActivityService.assertNoActiveSchedule(passengerId);
+        userActivityService.assertNoOpenRequest(passengerId);
 
         if (schedule.getStatus() != ScheduleStatus.CREATED) {
             throw new BusinessException("Ride is not accepting requests");
@@ -101,6 +102,41 @@ public class RideRequestServiceImpl implements RideRequestService {
                     .build());
         }
 
+        return rideRequestRepository.save(request);
+    }
+
+    @Override
+    @Transactional
+    public RideRequest cancelByPassenger(Long requestId, Long passengerId) {
+        RideRequest request = rideRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("RideRequest", requestId));
+
+        if (!request.getPassenger().getId().equals(passengerId)) {
+            throw new BusinessException("Not authorized to cancel this request", HttpStatus.FORBIDDEN);
+        }
+        if (request.getStatus() == RequestStatus.CANCELLED) {
+            return request;
+        }
+        if (request.getStatus() == RequestStatus.REJECTED) {
+            throw new BusinessException("Request was rejected by driver");
+        }
+
+        // If request was ACCEPTED, free the seat and remove ride passenger row
+        if (request.getStatus() == RequestStatus.ACCEPTED) {
+            RideSchedule schedule = request.getRideSchedule();
+            if (schedule.getStatus() == ScheduleStatus.STARTED || schedule.getStatus() == ScheduleStatus.COMPLETED) {
+                throw new BusinessException("Cannot cancel after ride has started");
+            }
+            schedule.setAvailableSeats((short) (schedule.getAvailableSeats() + 1));
+            rideScheduleRepository.save(schedule);
+            ridePassengerRepository.findByRideIdAndPassengerId(schedule.getId(), passengerId)
+                    .ifPresent(rp -> {
+                        rp.setStatus(PassengerStatus.CANCELLED);
+                        ridePassengerRepository.save(rp);
+                    });
+        }
+
+        request.setStatus(RequestStatus.CANCELLED);
         return rideRequestRepository.save(request);
     }
 

@@ -55,6 +55,15 @@ public class RideRequestController {
         return ResponseEntity.ok(ApiResponse.ok(rideRequestService.getPassengerRequests(passengerId)));
     }
 
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<ApiResponse<RideRequest>> cancelMyRequest(
+            @PathVariable Long requestId,
+            HttpServletRequest httpRequest) {
+        Long passengerId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(
+                rideRequestService.cancelByPassenger(requestId, passengerId)));
+    }
+
     private Long extractUserId(HttpServletRequest request) {
         String token = request.getHeader("Authorization").substring(7);
         return jwtUtil.extractUserId(token);

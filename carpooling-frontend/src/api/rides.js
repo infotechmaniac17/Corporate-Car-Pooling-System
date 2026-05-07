@@ -12,6 +12,9 @@ export const updateRequestStatus = (id, status) =>
 export const createRequest = (data) =>
   api.post('/rides/requests', data);
 
+export const cancelMyRequest = (requestId) =>
+  api.delete(`/rides/requests/${requestId}`);
+
 export const getSchedule = (id) =>
   api.get(`/rides/schedules/driver/${id}`);
 

@@ -6,6 +6,7 @@ import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getMyPassengerTrips } from '../api/trips';
+import { getMyRequests, cancelMyRequest } from '../api/rides';
 
 const STATUS_TONE = {
   ACTIVE: 'live',
@@ -110,14 +111,35 @@ export default function PassengerTripsScreen() {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const [trips, setTrips] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState(null);
 
-  useEffect(() => {
-    getMyPassengerTrips()
-      .then(res => setTrips(res.data?.data || []))
-      .catch(() => setTrips([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const load = () => {
+    setLoading(true);
+    Promise.all([
+      getMyPassengerTrips().then(r => r.data?.data || []).catch(() => []),
+      getMyRequests().then(r => r.data?.data || []).catch(() => []),
+    ]).then(([t, q]) => {
+      setTrips(t);
+      setRequests(q);
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCancelRequest = async (req) => {
+    if (!window.confirm('Cancel this ride request?')) return;
+    setCancellingId(`req-${req.id}`);
+    try {
+      await cancelMyRequest(req.id);
+      await load();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to cancel request.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const sorted = [...trips].sort((a, b) => {
     const ta = a.departureTime ? new Date(a.departureTime).getTime() : 0;
@@ -126,6 +148,7 @@ export default function PassengerTripsScreen() {
   });
   const upcoming = sorted.filter(t => t.status === 'ACTIVE');
   const past = sorted.filter(t => t.status !== 'ACTIVE');
+  const pendingRequests = requests.filter(r => r.status === 'PENDING' || r.status === 'ACCEPTED');
 
   const handleRate = (trip) => {
     navigate(`/rate/${trip.rideId}?driverId=${trip.driverId}`);
@@ -143,13 +166,62 @@ export default function PassengerTripsScreen() {
         </WpButton>
       </div>
 
+      {!loading && pendingRequests.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-700)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: 'var(--font-mono)' }}>
+            Pending requests
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {pendingRequests.map(r => {
+              const ride = r.rideSchedule || {};
+              const dep = ride.departureTime ? new Date(ride.departureTime) : null;
+              const when = dep
+                ? `${dep.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · ${dep.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : '—';
+              return (
+                <div key={`req-${r.id}`} style={{
+                  background: '#fff', borderRadius: 'var(--radius-lg)', padding: '16px',
+                  boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3 }}>
+                        {ride.pickupLabel || 'Pickup'} → {ride.dropoffLabel || 'Drop-off'}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
+                        {when} · driver {ride.driver?.name || ride.driverName || '—'}
+                      </div>
+                    </div>
+                    <WpPill tone={r.status === 'ACCEPTED' ? 'live' : 'matched'}>{r.status}</WpPill>
+                  </div>
+                  <button
+                    onClick={() => handleCancelRequest(r)}
+                    disabled={cancellingId === `req-${r.id}`}
+                    style={{
+                      width: '100%', padding: '9px', borderRadius: 'var(--radius-md)',
+                      border: '1.5px solid var(--danger-200)', background: 'var(--danger-50)',
+                      fontSize: 13, fontWeight: 600, color: 'var(--danger-700)',
+                      cursor: cancellingId === `req-${r.id}` ? 'wait' : 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      opacity: cancellingId === `req-${r.id}` ? 0.5 : 1,
+                    }}
+                  >
+                    {cancellingId === `req-${r.id}` ? 'Cancelling…' : 'Cancel request'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[1, 2, 3].map(i => (
             <div key={i} style={{ height: 130, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(90deg, var(--asphalt-100) 25%, var(--asphalt-50) 50%, var(--asphalt-100) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
           ))}
         </div>
-      ) : trips.length === 0 ? (
+      ) : trips.length === 0 && pendingRequests.length === 0 ? (
         <div style={{ background: '#fff', borderRadius: 'var(--radius-lg)', padding: '40px 20px', textAlign: 'center', border: '1.5px dashed var(--asphalt-200)' }}>
           <WpIcon name="search" size={36} color="var(--asphalt-300)" />
           <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--asphalt-600)', marginTop: 12 }}>No trips yet</p>
