@@ -154,6 +154,12 @@ public class RideRequestServiceImpl implements RideRequestService {
                 .stream().map(this::toResponse).toList();
     }
 
+    @Override
+    public List<RideRequestResponse> getRequestsForDriver(Long driverId) {
+        return rideRequestRepository.findAllByDriverId(driverId)
+                .stream().map(this::toResponse).toList();
+    }
+
     private RideRequestResponse toResponse(RideRequest r) {
         RideSchedule s = r.getRideSchedule();
         Point p = r.getPickupLocation();

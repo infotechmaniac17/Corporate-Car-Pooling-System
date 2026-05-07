@@ -55,6 +55,13 @@ public class RideRequestController {
         return ResponseEntity.ok(ApiResponse.ok(rideRequestService.getPassengerRequests(passengerId)));
     }
 
+    @GetMapping("/driver/my")
+    public ResponseEntity<ApiResponse<List<RideRequestResponse>>> getRequestsForMyRides(
+            HttpServletRequest httpRequest) {
+        Long driverId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(rideRequestService.getRequestsForDriver(driverId)));
+    }
+
     @DeleteMapping("/{requestId}")
     public ResponseEntity<ApiResponse<RideRequestResponse>> cancelMyRequest(
             @PathVariable Long requestId,

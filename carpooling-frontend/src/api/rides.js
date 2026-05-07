@@ -6,6 +6,9 @@ export const getMyRequests = () =>
 export const getDriverRequests = (rideId) =>
   api.get(`/rides/requests/ride/${rideId}`);
 
+export const getAllDriverRequests = () =>
+  api.get('/rides/requests/driver/my');
+
 export const updateRequestStatus = (id, status) =>
   api.patch(`/rides/requests/${id}/status?status=${status}`);
 

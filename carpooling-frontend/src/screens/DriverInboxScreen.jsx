@@ -7,7 +7,7 @@ import WpPill from '../components/WpPill';
 import WpButton from '../components/WpButton';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { getDriverRequests, updateRequestStatus } from '../api/rides';
+import { getDriverRequests, getAllDriverRequests, updateRequestStatus } from '../api/rides';
 
 function getInitials(name) {
   if (!name) return '?';
@@ -35,9 +35,12 @@ export default function DriverInboxScreen({ rideId }) {
   const resolvedRideId = rideId;
 
   useEffect(() => {
-    if (!resolvedRideId) { setLoading(false); return; }
-    getDriverRequests(resolvedRideId)
-      .then(res => setRequests(res.data || []))
+    setLoading(true);
+    const promise = resolvedRideId
+      ? getDriverRequests(resolvedRideId)
+      : getAllDriverRequests();
+    promise
+      .then(res => setRequests(res.data?.data || []))
       .catch(() => setRequests([]))
       .finally(() => setLoading(false));
   }, [resolvedRideId]);
@@ -88,7 +91,7 @@ export default function DriverInboxScreen({ rideId }) {
           {req.detourKm != null && <WpPill tone="warn">+{req.detourKm}km detour</WpPill>}
           {req.distanceKm != null && <WpPill tone="matched">{req.distanceKm}km away</WpPill>}
           {req.status && req.status !== 'PENDING' && (
-            <WpPill tone={req.status === 'ACCEPTED' ? 'live' : req.status === 'DECLINED' ? 'cancelled' : 'matched'}>
+            <WpPill tone={req.status === 'ACCEPTED' ? 'live' : req.status === 'REJECTED' ? 'cancelled' : 'matched'}>
               {req.status}
             </WpPill>
           )}
@@ -96,14 +99,14 @@ export default function DriverInboxScreen({ rideId }) {
 
         {isPending && !isActing ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <WpButton kind="danger" size="sm" full onClick={() => handleAction(req.id, 'DECLINED')}>Decline</WpButton>
+            <WpButton kind="danger" size="sm" full onClick={() => handleAction(req.id, 'REJECTED')}>Decline</WpButton>
             <WpButton kind="accent" size="sm" full onClick={() => handleAction(req.id, 'ACCEPTED')}>Accept</WpButton>
           </div>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             {req.status === 'ACCEPTED' || actionState === 'ACCEPTED' ? (
               <WpPill tone="live">Accepted</WpPill>
-            ) : req.status === 'DECLINED' || actionState === 'DECLINED' ? (
+            ) : req.status === 'REJECTED' || actionState === 'REJECTED' ? (
               <WpPill tone="cancelled">Declined</WpPill>
             ) : (
               <span style={{ fontSize: '13px', color: 'var(--asphalt-400)', fontFamily: 'var(--font-sans)' }}>Processing…</span>

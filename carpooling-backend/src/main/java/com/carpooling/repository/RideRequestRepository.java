@@ -21,6 +21,9 @@ public interface RideRequestRepository extends JpaRepository<RideRequest, Long> 
 
     boolean existsByPassengerIdAndStatusIn(Long passengerId, Collection<RequestStatus> statuses);
 
+    @Query("SELECT r FROM RideRequest r WHERE r.rideSchedule.driver.id = :driverId ORDER BY r.createdAt DESC")
+    List<RideRequest> findAllByDriverId(@Param("driverId") Long driverId);
+
     @Query("SELECT COUNT(r) FROM RideRequest r WHERE r.rideSchedule.id = :rideId AND r.status = 'ACCEPTED'")
     long countAcceptedByRideId(@Param("rideId") Long rideId);
 

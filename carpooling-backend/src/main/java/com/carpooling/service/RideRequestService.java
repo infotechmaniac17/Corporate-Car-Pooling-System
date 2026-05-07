@@ -11,5 +11,6 @@ public interface RideRequestService {
     RideRequestResponse updateRequestStatus(Long requestId, Long driverId, RequestStatus newStatus);
     List<RideRequestResponse> getRequestsForRide(Long rideId);
     List<RideRequestResponse> getPassengerRequests(Long passengerId);
+    List<RideRequestResponse> getRequestsForDriver(Long driverId);
     RideRequestResponse cancelByPassenger(Long requestId, Long passengerId);
 }
