@@ -92,7 +92,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
 
     @Override
     public List<RideScheduleResponse> getDriverSchedules(Long driverId) {
-        return rideScheduleRepository.findByDriverIdAndStatus(driverId, null)
+        return rideScheduleRepository.findByDriverIdOrderByDepartureTimeDesc(driverId)
                 .stream().map(this::toResponse).toList();
     }
 

@@ -14,6 +14,8 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
 
     List<RideSchedule> findByDriverIdAndStatus(Long driverId, ScheduleStatus status);
 
+    List<RideSchedule> findByDriverIdOrderByDepartureTimeDesc(Long driverId);
+
     boolean existsByDriverIdAndStatusIn(Long driverId, Collection<ScheduleStatus> statuses);
 
     boolean existsByDriverIdAndStatus(Long driverId, ScheduleStatus status);

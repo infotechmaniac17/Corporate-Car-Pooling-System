@@ -410,10 +410,10 @@ export default function ProfileScreen({ activityState }) {
           />
         </div>
         <AddressInput
-          label="Secondary address (optional)"
+          label="Office address"
           value={form.secondaryAddress}
           onChange={addr => setForm(f => ({ ...f, secondaryAddress: addr }))}
-          placeholder="Gym, relative's place, alternate pickup…"
+          placeholder="Your workplace — used to prefill ride drop-off"
           withUnit
         />
       </div>

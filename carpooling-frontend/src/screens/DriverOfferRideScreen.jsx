@@ -77,6 +77,12 @@ export default function DriverOfferRideScreen({ activityState }) {
     }
   }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
 
+  useEffect(() => {
+    if (currentUser?.secondaryAddress && currentUser?.secondaryLat && currentUser?.secondaryLng) {
+      setDropoff({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
+    }
+  }, [currentUser?.secondaryAddress, currentUser?.secondaryLat, currentUser?.secondaryLng]);
+
   const handleSubmit = async () => {
     if (!pickup?.lat || !pickup?.lng) { setError('Pick a pickup location from suggestions.'); return; }
     if (!dropoff?.lat || !dropoff?.lng) { setError('Pick a drop-off location from suggestions.'); return; }
