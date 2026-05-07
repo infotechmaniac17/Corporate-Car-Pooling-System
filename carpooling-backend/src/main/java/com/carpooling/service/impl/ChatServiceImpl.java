@@ -4,11 +4,15 @@ import com.carpooling.common.exception.BusinessException;
 import com.carpooling.common.exception.ResourceNotFoundException;
 import com.carpooling.dto.request.SendMessageRequest;
 import com.carpooling.dto.response.ChatMessageResponse;
+import com.carpooling.dto.response.ChatPartnerResponse;
 import com.carpooling.entity.ChatMessage;
+import com.carpooling.entity.RidePassenger;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.User;
+import com.carpooling.enums.PassengerStatus;
 import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.repository.ChatMessageRepository;
+import com.carpooling.repository.RidePassengerRepository;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.UserRepository;
 import com.carpooling.service.ChatService;
@@ -26,6 +30,7 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
     private final RideScheduleRepository rideScheduleRepository;
+    private final RidePassengerRepository ridePassengerRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -75,6 +80,46 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public long getUnreadCount(Long rideId, Long userId) {
         return chatMessageRepository.countByRideScheduleIdAndIsReadFalseAndSenderIdNot(rideId, userId);
+    }
+
+    @Override
+    public List<ChatPartnerResponse> getPartners(Long rideId, Long userId) {
+        RideSchedule schedule = rideScheduleRepository.findById(rideId)
+                .orElseThrow(() -> new ResourceNotFoundException("RideSchedule", rideId));
+
+        if (schedule.getStatus() != ScheduleStatus.ACTIVE && schedule.getStatus() != ScheduleStatus.STARTED) {
+            throw new BusinessException("Partner contacts only available for active or started rides");
+        }
+
+        Long driverId = schedule.getDriver().getId();
+        List<RidePassenger> activePassengers = ridePassengerRepository
+                .findByRideIdAndStatus(rideId, PassengerStatus.ACTIVE);
+
+        boolean isDriver = driverId.equals(userId);
+        boolean isPassenger = activePassengers.stream()
+                .anyMatch(rp -> rp.getPassenger().getId().equals(userId));
+
+        if (!isDriver && !isPassenger) {
+            throw new BusinessException("You are not part of this ride");
+        }
+
+        if (isDriver) {
+            // Driver sees all active passengers
+            return activePassengers.stream()
+                    .map(rp -> toPartner(rp.getPassenger(), "PASSENGER"))
+                    .toList();
+        }
+        // Passenger sees driver only
+        return List.of(toPartner(schedule.getDriver(), "DRIVER"));
+    }
+
+    private ChatPartnerResponse toPartner(User u, String role) {
+        return ChatPartnerResponse.builder()
+                .userId(u.getId())
+                .name(u.getName())
+                .phone(u.getPhone())
+                .role(role)
+                .build();
     }
 
     private ChatMessageResponse toResponse(ChatMessage m) {

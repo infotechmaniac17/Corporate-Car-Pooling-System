@@ -66,6 +66,7 @@ export default function AddressSetupScreen() {
           value={homeAddr}
           onChange={setHomeAddr}
           placeholder="Start typing your address…"
+          withUnit
         />
       </div>
 

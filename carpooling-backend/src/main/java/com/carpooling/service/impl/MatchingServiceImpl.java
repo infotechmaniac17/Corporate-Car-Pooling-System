@@ -9,12 +9,7 @@ import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.UserRepository;
 import com.carpooling.service.MatchingService;
 import lombok.RequiredArgsConstructor;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -29,9 +24,7 @@ public class MatchingServiceImpl implements MatchingService {
 
     private final RideScheduleRepository rideScheduleRepository;
     private final UserRepository userRepository;
-    private final JdbcTemplate jdbcTemplate;
 
-    private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
     private static final double EARTH_RADIUS_M = 6_371_000.0;
 
     @Override
@@ -56,17 +49,35 @@ public class MatchingServiceImpl implements MatchingService {
                 if (passengerGender == null || !rideGenderPref.name().equalsIgnoreCase(passengerGender)) continue;
             }
 
+            // Resolve driver pickup/dropoff: prefer direct columns; fall back to legacy Route.
+            double driverPickupLat, driverPickupLng, driverDropLat, driverDropLng;
+            if (schedule.getPickupLocation() != null && schedule.getDropoffLocation() != null) {
+                driverPickupLat = schedule.getPickupLocation().getY();
+                driverPickupLng = schedule.getPickupLocation().getX();
+                driverDropLat = schedule.getDropoffLocation().getY();
+                driverDropLng = schedule.getDropoffLocation().getX();
+            } else if (schedule.getRoute() != null && schedule.getRoute().getPath() != null) {
+                Point start = schedule.getRoute().getPath().getStartPoint();
+                Point end = schedule.getRoute().getPath().getEndPoint();
+                driverPickupLat = start.getY();
+                driverPickupLng = start.getX();
+                driverDropLat = end.getY();
+                driverDropLng = end.getX();
+            } else {
+                continue;
+            }
+
             // Proximity: pickup within search radius
             double distToPickup = haversineMeters(
                     request.getPickupLat(), request.getPickupLng(),
-                    schedule.getRoute().getPath().getStartPoint().getY(),
-                    schedule.getRoute().getPath().getStartPoint().getX());
+                    driverPickupLat, driverPickupLng);
 
             if (distToPickup > request.getSearchRadiusMeters()) continue;
 
             // Detour check: passenger route must not exceed driver's detour limit
-            double detourPct = calculateDetourPercent(
-                    schedule.getRoute().getPath(),
+            double detourPct = calculateDetourPercentByPoints(
+                    driverPickupLat, driverPickupLng,
+                    driverDropLat, driverDropLng,
                     request.getPickupLat(), request.getPickupLng(),
                     request.getDropLat(), request.getDropLng());
 
@@ -107,22 +118,16 @@ public class MatchingServiceImpl implements MatchingService {
         return EARTH_RADIUS_M * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    private double calculateDetourPercent(LineString driverPath,
-                                          double pickupLat, double pickupLng,
-                                          double dropLat, double dropLng) {
-        double originalLength = driverPath.getLength();
-        if (originalLength == 0) return 0;
-
-        // Detour = extra distance added by going to pickup + drop
-        Coordinate start = driverPath.getStartPoint().getCoordinate();
-        Coordinate end = driverPath.getEndPoint().getCoordinate();
-
-        double directToPickup = haversineMeters(start.y, start.x, pickupLat, pickupLng);
+    private double calculateDetourPercentByPoints(double driverStartLat, double driverStartLng,
+                                                  double driverEndLat, double driverEndLng,
+                                                  double pickupLat, double pickupLng,
+                                                  double dropLat, double dropLng) {
+        double directToPickup = haversineMeters(driverStartLat, driverStartLng, pickupLat, pickupLng);
         double pickupToDrop = haversineMeters(pickupLat, pickupLng, dropLat, dropLng);
-        double dropToEnd = haversineMeters(dropLat, dropLng, end.y, end.x);
+        double dropToEnd = haversineMeters(dropLat, dropLng, driverEndLat, driverEndLng);
 
         double detourLength = directToPickup + pickupToDrop + dropToEnd;
-        double originalLengthMeters = haversineMeters(start.y, start.x, end.y, end.x);
+        double originalLengthMeters = haversineMeters(driverStartLat, driverStartLng, driverEndLat, driverEndLng);
 
         if (originalLengthMeters == 0) return 0;
         return ((detourLength - originalLengthMeters) / originalLengthMeters) * 100;

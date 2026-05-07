@@ -29,7 +29,7 @@ async function fetchGoogleSuggestions(query) {
   }));
 }
 
-async function fetchGoogleDetails(placeId) {
+async function fetchGoogleDetails(placeId, fallbackLabel) {
   const res = await fetch(
     `https://places.googleapis.com/v1/places/${placeId}?fields=displayName,formattedAddress,location`,
     { headers: { 'X-Goog-Api-Key': GOOGLE_KEY, 'X-Goog-FieldMask': 'displayName,formattedAddress,location' } }
@@ -39,8 +39,20 @@ async function fetchGoogleDetails(placeId) {
     console.error('[AddressInput] Google details failed', res.status, data);
     throw new Error(data?.error?.message || `Google API ${res.status}`);
   }
+  const name = data.displayName?.text || '';
+  const formatted = data.formattedAddress || '';
+  // Preserve POI name (e.g., "Godrej Elements") that formattedAddress strips.
+  // Prefer the original autocomplete suggestion text if it already contains the POI name.
+  let label;
+  if (fallbackLabel && name && fallbackLabel.toLowerCase().includes(name.toLowerCase())) {
+    label = fallbackLabel;
+  } else if (name && formatted && !formatted.toLowerCase().startsWith(name.toLowerCase())) {
+    label = `${name}, ${formatted}`;
+  } else {
+    label = formatted || name || fallbackLabel || '';
+  }
   return {
-    label: data.formattedAddress || data.displayName?.text || '',
+    label,
     lat: data.location?.latitude ?? null,
     lng: data.location?.longitude ?? null,
   };
@@ -66,10 +78,31 @@ async function fetchMapboxSuggestions(query) {
   }));
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildCombined(unit, placeLabel) {
+  const u = (unit || '').trim();
+  const p = (placeLabel || '').trim();
+  if (u && p) return `${u}, ${p}`;
+  return p || u;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function AddressInput({ value, onChange, placeholder = 'Search address…', label }) {
-  const [query, setQuery] = useState(value?.label || '');
+export default function AddressInput({
+  value,
+  onChange,
+  placeholder = 'Search address…',
+  label,
+  withUnit = false,
+  unitPlaceholder = 'Flat / Floor / Door no (optional)',
+}) {
+  // Track the clean place label (POI from picker) and unit separately.
+  const initialPlace = value?.placeLabel || value?.label || '';
+  const initialUnit = value?.unit || '';
+  const [placeLabel, setPlaceLabel] = useState(initialPlace);
+  const [unit, setUnit] = useState(initialUnit);
+  const [query, setQuery] = useState(initialPlace);
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -97,11 +130,30 @@ export default function AddressInput({ value, onChange, placeholder = 'Search ad
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Sync label when value changes externally
+  // Sync from external value changes (e.g., rehydration from server).
   useEffect(() => {
-    const incoming = value?.label || '';
-    if (incoming !== query) setQuery(incoming);
-  }, [value?.label]);
+    const incomingPlace = value?.placeLabel || value?.label || '';
+    const incomingUnit = value?.unit || '';
+    if (incomingPlace !== placeLabel) {
+      setPlaceLabel(incomingPlace);
+      setQuery(incomingPlace);
+    }
+    if (incomingUnit !== unit) setUnit(incomingUnit);
+  }, [value?.label, value?.placeLabel, value?.unit]);
+
+  const emit = (nextPlace, nextUnit, lat, lng) => {
+    if (!nextPlace && !nextUnit) {
+      onChange(null);
+      return;
+    }
+    onChange({
+      label: buildCombined(nextUnit, nextPlace),
+      placeLabel: nextPlace,
+      unit: nextUnit || '',
+      lat: lat ?? value?.lat ?? null,
+      lng: lng ?? value?.lng ?? null,
+    });
+  };
 
   const search = useCallback(async (q) => {
     if (q.length < 3) { setSuggestions([]); setOpen(false); return; }
@@ -125,7 +177,13 @@ export default function AddressInput({ value, onChange, placeholder = 'Search ad
   const handleInput = (e) => {
     const q = e.target.value;
     setQuery(q);
-    if (!q) { onChange(null); setSuggestions([]); setOpen(false); return; }
+    if (!q) {
+      setPlaceLabel('');
+      emit('', unit, null, null);
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => search(q), 350);
   };
@@ -133,20 +191,28 @@ export default function AddressInput({ value, onChange, placeholder = 'Search ad
   const handleSelect = async (item) => {
     setOpen(false);
     setQuery(item.label);
+    setPlaceLabel(item.label);
     if (item.source === 'mapbox' || item.lat != null) {
-      onChange({ label: item.label, lat: item.lat, lng: item.lng });
+      emit(item.label, unit, item.lat, item.lng);
     } else {
       setFetching(true);
       try {
-        const details = await fetchGoogleDetails(item.id);
+        const details = await fetchGoogleDetails(item.id, item.label);
         setQuery(details.label);
-        onChange(details);
+        setPlaceLabel(details.label);
+        emit(details.label, unit, details.lat, details.lng);
       } catch {
-        onChange({ label: item.label, lat: null, lng: null });
+        emit(item.label, unit, null, null);
       } finally {
         setFetching(false);
       }
     }
+  };
+
+  const handleUnitChange = (e) => {
+    const u = e.target.value;
+    setUnit(u);
+    emit(placeLabel, u, value?.lat, value?.lng);
   };
 
   return (
@@ -161,12 +227,31 @@ export default function AddressInput({ value, onChange, placeholder = 'Search ad
         </label>
       )}
 
+      {withUnit && (
+        <input
+          type="text"
+          value={unit}
+          onChange={handleUnitChange}
+          placeholder={unitPlaceholder}
+          style={{
+            width: '100%', padding: '9px 14px', marginBottom: 8,
+            borderRadius: 'var(--radius-md)',
+            border: '1.5px solid var(--asphalt-200)',
+            fontSize: 13, fontFamily: 'var(--font-sans)',
+            color: 'var(--asphalt-900)', background: '#fff',
+            outline: 'none', boxSizing: 'border-box',
+            transition: 'border-color 0.15s',
+          }}
+          onFocus={e => e.target.style.borderColor = 'var(--ink-600)'}
+          onBlur={e => e.target.style.borderColor = 'var(--asphalt-200)'}
+        />
+      )}
+
       <div style={{ position: 'relative' }}>
         <input
           type="text"
           value={query}
           onChange={handleInput}
-          onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder={provider ? placeholder : 'Enter address manually (no map provider set)'}
           style={{
             width: '100%', padding: '10px 36px 10px 14px',
@@ -177,7 +262,10 @@ export default function AddressInput({ value, onChange, placeholder = 'Search ad
             outline: 'none', boxSizing: 'border-box',
             transition: 'border-color 0.15s',
           }}
-          onFocus={e => e.target.style.borderColor = 'var(--ink-600)'}
+          onFocus={e => {
+            e.target.style.borderColor = 'var(--ink-600)';
+            if (suggestions.length > 0) setOpen(true);
+          }}
           onBlur={e => e.target.style.borderColor = 'var(--asphalt-200)'}
         />
         <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>

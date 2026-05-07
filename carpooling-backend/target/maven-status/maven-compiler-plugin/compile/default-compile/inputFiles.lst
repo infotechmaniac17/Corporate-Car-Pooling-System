@@ -49,6 +49,7 @@ d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\VerifyOtpRequest.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\AuthResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\ChatMessageResponse.java
+d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\ChatPartnerResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\GuardianContactResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\MatchedRideResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\OrganisationResponse.java

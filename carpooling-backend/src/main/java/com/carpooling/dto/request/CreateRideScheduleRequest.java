@@ -13,16 +13,34 @@ public class CreateRideScheduleRequest {
     private Long vehicleId;
 
     @NotNull
-    private Long routeId;
+    private Double pickupLat;
 
-    @NotNull @Future
+    @NotNull
+    private Double pickupLng;
+
+    @NotBlank
+    private String pickupLabel;
+
+    @NotNull
+    private Double dropoffLat;
+
+    @NotNull
+    private Double dropoffLng;
+
+    @NotBlank
+    private String dropoffLabel;
+
+    @NotNull
     private OffsetDateTime departureTime;
 
-    @NotNull @Min(1)
+    @NotNull @Min(1) @Max(8)
     private Short availableSeats;
 
+    @NotNull @DecimalMin("0.0")
+    private BigDecimal fare;
+
     @DecimalMin("0.0") @DecimalMax("100.0")
-    private BigDecimal detourLimitPercent = BigDecimal.valueOf(20.00);
+    private BigDecimal detourLimitPercent;
 
     private GenderPreference genderPreference;
 }

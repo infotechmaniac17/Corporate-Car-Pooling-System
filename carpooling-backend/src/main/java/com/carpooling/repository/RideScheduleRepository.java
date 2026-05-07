@@ -37,7 +37,7 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
         SELECT rs FROM RideSchedule rs
         JOIN FETCH rs.driver
         JOIN FETCH rs.vehicle
-        JOIN FETCH rs.route
+        LEFT JOIN FETCH rs.route
         WHERE rs.id = :id
         """)
     java.util.Optional<RideSchedule> findByIdWithDetails(@Param("id") Long id);

@@ -406,6 +406,7 @@ export default function ProfileScreen({ activityState }) {
             value={form.homeAddress}
             onChange={addr => setForm(f => ({ ...f, homeAddress: addr }))}
             placeholder="Where you commute from…"
+            withUnit
           />
         </div>
         <AddressInput
@@ -413,6 +414,7 @@ export default function ProfileScreen({ activityState }) {
           value={form.secondaryAddress}
           onChange={addr => setForm(f => ({ ...f, secondaryAddress: addr }))}
           placeholder="Gym, relative's place, alternate pickup…"
+          withUnit
         />
       </div>
 

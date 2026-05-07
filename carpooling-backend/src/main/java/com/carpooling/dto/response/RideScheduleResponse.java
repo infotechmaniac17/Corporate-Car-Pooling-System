@@ -16,6 +16,13 @@ public class RideScheduleResponse {
     private String vehicleNumber;
     private Short vehicleCapacity;
     private Long routeId;
+    private Double pickupLat;
+    private Double pickupLng;
+    private String pickupLabel;
+    private Double dropoffLat;
+    private Double dropoffLng;
+    private String dropoffLabel;
+    private BigDecimal fare;
     private OffsetDateTime departureTime;
     private Short availableSeats;
     private BigDecimal detourLimitPercent;

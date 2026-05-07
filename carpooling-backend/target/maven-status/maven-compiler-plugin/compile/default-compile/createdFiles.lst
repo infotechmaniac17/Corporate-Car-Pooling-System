@@ -9,6 +9,7 @@ com\carpooling\service\impl\EmailServiceImpl.class
 com\carpooling\dto\response\RouteWaypointResponse.class
 com\carpooling\dto\request\SendMessageRequest.class
 com\carpooling\service\RideRequestService.class
+com\carpooling\dto\response\ChatPartnerResponse$ChatPartnerResponseBuilder.class
 com\carpooling\dto\request\VehicleRequest.class
 com\carpooling\config\AppConfig.class
 com\carpooling\service\impl\RouteWaypointServiceImpl.class
@@ -28,6 +29,7 @@ com\carpooling\service\impl\RideScheduleServiceImpl$1.class
 com\carpooling\repository\BackupRideRepository.class
 com\carpooling\service\RidePassengerService.class
 com\carpooling\service\SosService.class
+com\carpooling\dto\response\ChatPartnerResponse.class
 com\carpooling\service\EmailVerificationService.class
 com\carpooling\repository\RatingRepository.class
 com\carpooling\entity\Organisation$OrganisationBuilder.class
