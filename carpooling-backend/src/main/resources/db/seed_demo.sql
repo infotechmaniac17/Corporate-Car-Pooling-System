@@ -127,6 +127,17 @@ INSERT INTO users (id, organisation_id, name, email, phone, gender, role, rating
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
+-- Office (secondary) address — same Magarpatta HQ for all employees
+-- so OfferRide / Matching dropoff prefills automatically.
+-- New user (9101) + admin (9115) skipped.
+-- =============================================================
+UPDATE users SET
+    secondary_address = 'Magarpatta City, Hadapsar, Pune',
+    secondary_lat     = 18.5167,
+    secondary_lng     = 73.9286
+WHERE id IN (9102, 9103, 9104, 9105, 9106, 9107, 9108, 9109, 9110, 9111, 9112, 9113, 9114);
+
+-- =============================================================
 -- Vehicles (one per active driver)
 -- =============================================================
 INSERT INTO vehicles (id, driver_id, vehicle_number, capacity, created_at, updated_at) VALUES
