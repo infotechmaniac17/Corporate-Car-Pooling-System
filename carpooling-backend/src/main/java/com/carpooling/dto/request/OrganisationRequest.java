@@ -10,4 +10,8 @@ public class OrganisationRequest {
 
     @NotBlank
     private String domain;
+
+    private String officeAddress;
+    private Double officeLat;
+    private Double officeLng;
 }

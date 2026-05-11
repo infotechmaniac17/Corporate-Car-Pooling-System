@@ -25,10 +25,12 @@ d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\controller\RouteWaypointController.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\controller\SosController.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\controller\TrackingController.java
+d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\controller\TripHistoryController.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\controller\UserController.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\controller\VehicleController.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\AddWaypointRequest.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\CancelScheduleRequest.java
+d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\CreateAdminRequest.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\CreateRideScheduleRequest.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\DriverRoleRequestDto.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\request\ForgotPasswordRequest.java
@@ -56,6 +58,7 @@ d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\ProfileStatsResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\RatingResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\RidePassengerResponse.java
+d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\RideRequestResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\RideScheduleResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\RoleRequestResponse.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\dto\response\RouteWaypointResponse.java
@@ -83,6 +86,7 @@ d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\entity\Vehicle.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\enums\CancellationReason.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\enums\GenderPreference.java
+d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\enums\OrganisationStatus.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\enums\PassengerStatus.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\enums\RequestStatus.java
 d:\Coorporate car pooling system\carpooling-backend\src\main\java\com\carpooling\enums\ScheduleStatus.java

@@ -90,6 +90,16 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         Organisation org = organisationRepository.findById(request.getOrganisationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Organisation", request.getOrganisationId()));
 
+        if (org.getStatus() != com.carpooling.enums.OrganisationStatus.ACTIVE) {
+            throw new com.carpooling.common.exception.BusinessException("Organisation is not active");
+        }
+
+        String emailDomain = email.substring(email.indexOf('@') + 1);
+        if (!emailDomain.equalsIgnoreCase(org.getDomain())) {
+            throw new com.carpooling.common.exception.BusinessException(
+                    "Email domain does not match organisation domain: " + org.getDomain());
+        }
+
         boolean registeringAsDriver = request.getRole() == com.carpooling.enums.UserRole.DRIVER;
 
         User user = User.builder()
@@ -104,6 +114,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                         ? com.carpooling.enums.VerificationStatus.PENDING
                         : com.carpooling.enums.VerificationStatus.NONE)
                 .passengerStatus(com.carpooling.enums.VerificationStatus.APPROVED)
+                .secondaryAddress(org.getOfficeAddress())
+                .secondaryLat(org.getOfficeLat())
+                .secondaryLng(org.getOfficeLng())
                 .build();
         user = userRepository.save(user);
 
