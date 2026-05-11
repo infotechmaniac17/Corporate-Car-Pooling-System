@@ -89,6 +89,14 @@ public class User {
     @Column(name = "secondary_lng")
     private Double secondaryLng;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "office_id")
+    private OrganisationOffice office;
+
+    @Column(name = "is_suspended", nullable = false)
+    @Builder.Default
+    private Boolean isSuspended = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

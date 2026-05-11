@@ -90,6 +90,18 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(ridePassengerService.getRidesForPassenger(userId)));
     }
 
+    @PostMapping("/{userId}/suspend")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> suspendUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.suspendUser(userId)));
+    }
+
+    @PostMapping("/{userId}/activate")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> activateUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.activateUser(userId)));
+    }
+
     @DeleteMapping("/{userId}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(
             @PathVariable Long userId,

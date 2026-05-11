@@ -21,4 +21,6 @@ public interface UserService {
     void softDeleteUser(Long userId);
     void forgotPassword(String email);
     void resetPassword(String token, String newPassword);
+    UserResponse suspendUser(Long userId);
+    UserResponse activateUser(Long userId);
 }

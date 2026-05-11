@@ -25,4 +25,7 @@ public class UserResponse {
     private String secondaryAddress;
     private Double secondaryLat;
     private Double secondaryLng;
+    private Boolean isSuspended;
+    private Long officeId;
+    private String officeName;
 }
