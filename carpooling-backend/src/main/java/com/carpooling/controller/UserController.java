@@ -1,19 +1,27 @@
 package com.carpooling.controller;
 
 import com.carpooling.common.ApiResponse;
+import com.carpooling.common.exception.BusinessException;
+import com.carpooling.common.exception.ResourceNotFoundException;
 import com.carpooling.config.JwtUtil;
 import com.carpooling.dto.request.UpdateUserRequest;
 import com.carpooling.dto.response.ProfileStatsResponse;
 import com.carpooling.dto.response.RidePassengerResponse;
 import com.carpooling.dto.response.UserActivityResponse;
 import com.carpooling.dto.response.UserResponse;
+import com.carpooling.entity.User;
+import com.carpooling.enums.UserRole;
+import com.carpooling.repository.UserRepository;
 import com.carpooling.service.RidePassengerService;
 import com.carpooling.service.UserActivityService;
 import com.carpooling.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +32,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
     private final RidePassengerService ridePassengerService;
     private final UserActivityService userActivityService;
     private final JwtUtil jwtUtil;
@@ -34,7 +43,17 @@ public class UserController {
     }
 
     @GetMapping("/organisation/{orgId}")
-    public ResponseEntity<ApiResponse<List<UserResponse>>> getUsersByOrg(@PathVariable Long orgId) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getUsersByOrg(
+            @PathVariable Long orgId,
+            Authentication authentication) {
+        User caller = userRepository.findByEmailAndIsDeletedFalse(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + authentication.getName()));
+        if (caller.getRole() == UserRole.ADMIN) {
+            if (!caller.getOrganisation().getId().equals(orgId)) {
+                throw new BusinessException("Access denied", HttpStatus.FORBIDDEN);
+            }
+        }
         return ResponseEntity.ok(ApiResponse.ok(userService.getUsersByOrganisation(orgId)));
     }
 

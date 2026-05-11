@@ -6,6 +6,7 @@ import com.carpooling.config.JwtUtil;
 import com.carpooling.dto.request.CancelScheduleRequest;
 import com.carpooling.dto.request.CreateRideScheduleRequest;
 import com.carpooling.dto.response.RideScheduleResponse;
+import com.carpooling.enums.GenderPreference;
 import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.enums.VerificationStatus;
 import com.carpooling.repository.UserRepository;
@@ -13,9 +14,12 @@ import com.carpooling.service.RideScheduleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 import java.util.List;
 
@@ -40,6 +44,16 @@ public class RideScheduleController {
         });
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(rideScheduleService.createSchedule(driverId, request)));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<RideScheduleResponse>>> searchSchedules(
+            @RequestParam(required = false) String driverName,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate,
+            @RequestParam(required = false) Short availableSeats,
+            @RequestParam(required = false) GenderPreference gender) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                rideScheduleService.searchSchedules(driverName, departureDate, availableSeats, gender)));
     }
 
     @GetMapping("/{scheduleId}")

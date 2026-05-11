@@ -8,6 +8,7 @@ import com.carpooling.service.RoleRequestService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/role-requests")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 public class AdminRoleRequestController {
 
     private final RoleRequestService roleRequestService;
@@ -23,9 +25,11 @@ public class AdminRoleRequestController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<RoleRequestResponse>>> listByStatus(
-            @RequestParam(defaultValue = "PENDING") String status) {
+            @RequestParam(defaultValue = "PENDING") String status,
+            HttpServletRequest httpRequest) {
         VerificationStatus vs = VerificationStatus.valueOf(status.toUpperCase());
-        return ResponseEntity.ok(ApiResponse.ok(roleRequestService.listByStatus(vs)));
+        Long adminId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(roleRequestService.listByStatus(vs, adminId)));
     }
 
     @PostMapping("/{id}/approve")
@@ -50,4 +54,6 @@ public class AdminRoleRequestController {
         String token = request.getHeader("Authorization").substring(7);
         return jwtUtil.extractUserId(token);
     }
+
+
 }

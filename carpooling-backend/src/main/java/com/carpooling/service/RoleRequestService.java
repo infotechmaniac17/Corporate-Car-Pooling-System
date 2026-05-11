@@ -17,7 +17,7 @@ public interface RoleRequestService {
 
     void submitPassengerRequest(Long userId);
 
-    List<RoleRequestResponse> listByStatus(VerificationStatus status);
+    List<RoleRequestResponse> listByStatus(VerificationStatus status, Long adminId);
 
     List<RoleRequestResponse> getMyRequests(Long userId);
 

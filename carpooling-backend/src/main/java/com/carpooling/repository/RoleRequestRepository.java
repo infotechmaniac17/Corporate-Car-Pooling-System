@@ -11,6 +11,8 @@ public interface RoleRequestRepository extends JpaRepository<RoleRequest, Long> 
 
     List<RoleRequest> findByStatus(VerificationStatus status);
 
+    List<RoleRequest> findByStatusAndUserOrganisationId(VerificationStatus status, Long organisationId);
+
     List<RoleRequest> findByUserId(Long userId);
 
     boolean existsByUserIdAndVehiclePlateAndStatus(Long userId, String vehiclePlate, VerificationStatus status);

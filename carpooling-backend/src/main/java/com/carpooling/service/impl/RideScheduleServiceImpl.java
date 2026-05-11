@@ -13,10 +13,14 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import com.carpooling.enums.GenderPreference;
 import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.entity.RidePassenger;
+import com.carpooling.entity.RideRequest;
 import com.carpooling.enums.PassengerStatus;
+import com.carpooling.enums.RequestStatus;
 import com.carpooling.repository.RidePassengerRepository;
+import com.carpooling.repository.RideRequestRepository;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.RouteRepository;
 import com.carpooling.repository.UserRepository;
@@ -29,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -40,6 +45,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     private final VehicleRepository vehicleRepository;
     private final RouteRepository routeRepository;
     private final RidePassengerRepository ridePassengerRepository;
+    private final RideRequestRepository rideRequestRepository;
     private final UserActivityService userActivityService;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
@@ -120,6 +126,15 @@ public class RideScheduleServiceImpl implements RideScheduleService {
                     });
         }
 
+        if (newStatus == ScheduleStatus.CANCELLED) {
+            ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)
+                    .forEach(rp -> {
+                        rp.setStatus(PassengerStatus.CANCELLED);
+                        ridePassengerRepository.save(rp);
+                    });
+            cancelOpenRideRequests(scheduleId);
+        }
+
         return toResponse(saved);
     }
 
@@ -144,6 +159,20 @@ public class RideScheduleServiceImpl implements RideScheduleService {
                     rp.setStatus(PassengerStatus.CANCELLED);
                     ridePassengerRepository.save(rp);
                 });
+        cancelOpenRideRequests(scheduleId);
+    }
+
+    private void cancelOpenRideRequests(Long scheduleId) {
+        List<RideRequest> open = rideRequestRepository.findByRideScheduleIdAndStatusIn(
+                scheduleId, List.of(RequestStatus.PENDING, RequestStatus.ACCEPTED));
+        open.forEach(rr -> rr.setStatus(RequestStatus.CANCELLED));
+        rideRequestRepository.saveAll(open);
+    }
+
+    @Override
+    public List<RideScheduleResponse> searchSchedules(String driverName, LocalDate departureDate, Short availableSeats, GenderPreference gender) {
+        return rideScheduleRepository.searchSchedules(driverName, departureDate, availableSeats, gender)
+                .stream().map(this::toResponse).toList();
     }
 
     private RideSchedule getScheduleOrThrow(Long id) {

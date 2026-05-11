@@ -6,79 +6,15 @@ import WpPill from '../components/WpPill';
 import api from '../api/client';
 import { adminGetRoleRequests, adminApproveRequest, adminRejectRequest } from '../api/roleRequests';
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── No-endpoint stubs (empty — no real API yet) ──────────────────────────────
 
-const MOCK_RIDES = [
-  { id: 'R001', origin: 'Koramangala', dest: 'Whitefield',    driver: 'Arjun Mehta',  riders: 3, capacity: 4, status: 'LIVE',      eta: '9:12 AM',  fare: '₹360', dept: '8:45 AM' },
-  { id: 'R002', origin: 'HSR Layout',  dest: 'Electronic City',driver: 'Priya Sharma', riders: 2, capacity: 3, status: 'LIVE',      eta: '9:28 AM',  fare: '₹190', dept: '8:55 AM' },
-  { id: 'R003', origin: 'Indiranagar', dest: 'Marathahalli',  driver: 'Ravi Kumar',   riders: 4, capacity: 4, status: 'MATCHED',   eta: '9:45 AM',  fare: '₹560', dept: '9:10 AM' },
-  { id: 'R004', origin: 'Jayanagar',   dest: 'MG Road',       driver: 'Sneha Patel',  riders: 1, capacity: 4, status: 'PENDING',   eta: '10:00 AM', fare: '₹95',  dept: '9:30 AM' },
-  { id: 'R005', origin: 'BTM Layout',  dest: 'Outer Ring Rd', driver: 'Kiran Das',    riders: 3, capacity: 4, status: 'LIVE',      eta: '9:35 AM',  fare: '₹315', dept: '9:00 AM' },
-  { id: 'R006', origin: 'Bellandur',   dest: 'Hebbal',        driver: 'Amit Rao',     riders: 2, capacity: 3, status: 'COMPLETED', eta: '—',        fare: '₹420', dept: '7:30 AM' },
-  { id: 'R007', origin: 'Marathahalli',dest: 'Silk Board',    driver: 'Deepa V.',     riders: 4, capacity: 4, status: 'COMPLETED', eta: '—',        fare: '₹280', dept: '7:45 AM' },
-];
-
-const MOCK_EMPLOYEES = [
-  { id: 'E001', name: 'Aarav Joshi',    email: 'aarav@acme.com',    role: 'PASSENGER', org: 'Acme Corp',    rides: 48, rating: 4.7 },
-  { id: 'E002', name: 'Priya Sharma',   email: 'priya@acme.com',    role: 'DRIVER',    org: 'Acme Corp',    rides: 132, rating: 4.9 },
-  { id: 'E003', name: 'Meera Nair',     email: 'meera@zomato.com',  role: 'PASSENGER', org: 'Zomato',       rides: 24, rating: 4.8 },
-  { id: 'E004', name: 'Kiran Das',      email: 'kiran@acme.com',    role: 'DRIVER',    org: 'Acme Corp',    rides: 89, rating: 4.6 },
-  { id: 'E005', name: 'Sneha Patel',    email: 'sneha@zomato.com',  role: 'DRIVER',    org: 'Zomato',       rides: 67, rating: 4.8 },
-  { id: 'E006', name: 'Rahul Gupta',    email: 'rahul@acme.com',    role: 'PASSENGER', org: 'Acme Corp',    rides: 35, rating: 4.5 },
-  { id: 'E007', name: 'Anita Mehta',    email: 'anita@zomato.com',  role: 'PASSENGER', org: 'Zomato',       rides: 19, rating: 4.9 },
-  { id: 'E008', name: 'Vijay Kumar',    email: 'vijay@acme.com',    role: 'DRIVER',    org: 'Acme Corp',    rides: 104, rating: 4.7 },
-];
-
-const MOCK_VEHICLES = [
-  { id: 'V001', driver: 'Priya Sharma',  plate: 'KA 01 MH 4521', type: 'SUV',    model: 'Toyota Innova',  seats: 6, status: 'ACTIVE',    fuel: 'Petrol' },
-  { id: 'V002', driver: 'Kiran Das',     plate: 'KA 03 AB 1234', type: 'Sedan',  model: 'Honda City',     seats: 4, status: 'ACTIVE',    fuel: 'CNG'    },
-  { id: 'V003', driver: 'Sneha Patel',   plate: 'MH 12 CD 5678', type: 'Hatch',  model: 'Maruti Swift',   seats: 4, status: 'ACTIVE',    fuel: 'Petrol' },
-  { id: 'V004', driver: 'Vijay Kumar',   plate: 'KA 05 EF 9012', type: 'SUV',    model: 'Mahindra XUV',   seats: 6, status: 'INACTIVE',  fuel: 'Diesel' },
-  { id: 'V005', driver: 'Arjun Mehta',   plate: 'KA 02 GH 3456', type: 'Sedan',  model: 'Hyundai Verna',  seats: 4, status: 'ACTIVE',    fuel: 'Petrol' },
-];
-
-const MOCK_ROUTES = [
-  { id: 'RT001', origin: 'Koramangala', dest: 'Whitefield',     driver: 'Arjun Mehta',  dept: '8:45 AM', dist: '18 km', riders: 28, status: 'ACTIVE'   },
-  { id: 'RT002', origin: 'HSR Layout',  dest: 'Electronic City', driver: 'Priya Sharma', dept: '8:55 AM', dist: '12 km', riders: 15, status: 'ACTIVE'   },
-  { id: 'RT003', origin: 'Indiranagar', dest: 'Marathahalli',   driver: 'Ravi Kumar',   dept: '9:10 AM', dist: '14 km', riders: 22, status: 'ACTIVE'   },
-  { id: 'RT004', origin: 'Jayanagar',   dest: 'MG Road',        driver: 'Sneha Patel',  dept: '9:30 AM', dist: '8 km',  riders: 10, status: 'INACTIVE' },
-  { id: 'RT005', origin: 'BTM Layout',  dest: 'Outer Ring Rd',  driver: 'Kiran Das',    dept: '9:00 AM', dist: '11 km', riders: 18, status: 'ACTIVE'   },
-];
-
-const MOCK_RATINGS = [
-  { driver: 'Priya Sharma',  initials: 'PS', avg: 4.9, total: 132, five: 89, four: 35, three: 6, two: 2, one: 0 },
-  { driver: 'Vijay Kumar',   initials: 'VK', avg: 4.7, total: 104, five: 71, four: 25, three: 7, two: 1, one: 0 },
-  { driver: 'Kiran Das',     initials: 'KD', avg: 4.6, total: 89,  five: 55, four: 26, three: 5, two: 3, one: 0 },
-  { driver: 'Sneha Patel',   initials: 'SP', avg: 4.8, total: 67,  five: 48, four: 14, three: 4, two: 1, one: 0 },
-  { driver: 'Arjun Mehta',   initials: 'AM', avg: 4.5, total: 58,  five: 32, four: 18, three: 6, two: 2, one: 0 },
-];
-
-const MOCK_TRANSACTIONS = [
-  { id: 'TXN001', rider: 'Aarav Joshi',   driver: 'Priya Sharma',  route: 'Koramangala → Whitefield',  amount: '₹360', date: 'May 3, 2026', status: 'PAID',    method: 'UPI'   },
-  { id: 'TXN002', rider: 'Meera Nair',    driver: 'Kiran Das',     route: 'BTM Layout → Outer Ring Rd', amount: '₹315', date: 'May 3, 2026', status: 'PAID',    method: 'Card'  },
-  { id: 'TXN003', rider: 'Rahul Gupta',   driver: 'Sneha Patel',   route: 'HSR Layout → Electronic City',amount:'₹190', date: 'May 3, 2026', status: 'PENDING', method: 'UPI'   },
-  { id: 'TXN004', rider: 'Anita Mehta',   driver: 'Vijay Kumar',   route: 'Indiranagar → Marathahalli', amount: '₹560', date: 'May 2, 2026', status: 'PAID',    method: 'Wallet'},
-  { id: 'TXN005', rider: 'Vijay Kumar',   driver: 'Arjun Mehta',   route: 'Koramangala → Whitefield',  amount: '₹360', date: 'May 2, 2026', status: 'REFUNDED', method: 'UPI'  },
-  { id: 'TXN006', rider: 'Aarav Joshi',   driver: 'Priya Sharma',  route: 'Jayanagar → MG Road',       amount: '₹95',  date: 'May 1, 2026', status: 'PAID',    method: 'UPI'   },
-];
-
-const MOCK_REIMBURSEMENTS = [
-  { id: 'RMB001', employee: 'Aarav Joshi',   org: 'Acme Corp',  rides: 22, amount: '₹3,960', period: 'Apr 2026', status: 'APPROVED' },
-  { id: 'RMB002', employee: 'Meera Nair',    org: 'Zomato',     rides: 12, amount: '₹1,800', period: 'Apr 2026', status: 'PENDING'  },
-  { id: 'RMB003', employee: 'Rahul Gupta',   org: 'Acme Corp',  rides: 18, amount: '₹2,700', period: 'Apr 2026', status: 'APPROVED' },
-  { id: 'RMB004', employee: 'Anita Mehta',   org: 'Zomato',     rides: 9,  amount: '₹1,350', period: 'Apr 2026', status: 'REJECTED' },
-  { id: 'RMB005', employee: 'Vijay Kumar',   org: 'Acme Corp',  rides: 30, amount: '₹4,500', period: 'Apr 2026', status: 'PENDING'  },
-];
-
-const MOCK_SOS = [
-  { id: 'SOS001', rider: 'Meera Nair',    driver: 'Arjun Mehta',  route: 'Koramangala → Whitefield',    time: '2 min ago',  status: 'ACTIVE',   contacts: 3 },
-  { id: 'SOS002', rider: 'Rahul Gupta',   driver: 'Sneha Patel',  route: 'HSR Layout → Electronic City', time: '38 min ago', status: 'RESOLVED', contacts: 2 },
-];
-
-const MOCK_BACKUP = [
-  { id: 'BK001', route: 'R-018 · BTM → Outer Ring', riders: 3, time: '9:00 AM', available: ['Vijay K.', 'Amit R.', 'Deepa V.'], status: 'PENDING' },
-  { id: 'BK002', route: 'R-024 · Jayanagar → MG Rd', riders: 2, time: '9:30 AM', available: ['Kiran D.', 'Sneha P.'],            status: 'ASSIGNED' },
-];
+const MOCK_VEHICLES = [];
+const MOCK_ROUTES = [];
+const MOCK_RATINGS = [];
+const MOCK_TRANSACTIONS = [];
+const MOCK_REIMBURSEMENTS = [];
+const MOCK_SOS = [];
+const MOCK_BACKUP = [];
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun','Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const RIDE_DATA = [95,112,108,120,128,45,22,98,115,124,118,128,48,20];
@@ -307,20 +243,8 @@ function OverviewPage({ today }) {
         </Card>
       </div>
       <Card style={{ overflow: 'hidden' }}>
-        <CardHeader title="Active rides" meta={`${MOCK_RIDES.filter(r => r.status !== 'COMPLETED').length} IN PROGRESS`} />
-        <Table
-          cols={['Route', 'Driver', 'Riders', 'Status', 'Departs', 'ETA', 'Fare']}
-          rows={MOCK_RIDES}
-          renderRow={r => (<>
-            <TD><MiniRoute origin={r.origin} dest={r.dest} /></TD>
-            <TD>{r.driver}</TD>
-            <TD mono>{r.riders} / {r.capacity}</TD>
-            <TD><StatusPill status={r.status} /></TD>
-            <TD mono muted>{r.dept}</TD>
-            <TD mono muted>{r.eta}</TD>
-            <TD mono bold>{r.fare}</TD>
-          </>)}
-        />
+        <CardHeader title="Active rides" meta="See Active rides tab" />
+        <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
       </Card>
     </>
   );
@@ -328,16 +252,36 @@ function OverviewPage({ today }) {
 
 function ActiveRidesPage() {
   const [filter, setFilter] = useState('ALL');
-  const statuses = ['ALL', 'LIVE', 'MATCHED', 'PENDING', 'COMPLETED'];
-  const filtered = filter === 'ALL' ? MOCK_RIDES : MOCK_RIDES.filter(r => r.status === filter);
+  const [rides, setRides] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const statuses = ['ALL', 'CREATED', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    api.get('/rides/schedules/search')
+      .then(res => setRides(res.data?.data || []))
+      .catch(() => setError('Failed to load rides'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = filter === 'ALL' ? rides : rides.filter(r => r.status === filter);
+
+  const fmtTime = (iso) => {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }); } catch { return '—'; }
+  };
+  const fmtFare = (f) => f != null ? `₹${parseFloat(f).toLocaleString('en-IN')}` : '—';
+
   return (
     <>
-      <PageHeader title="Active rides" sub={`${MOCK_RIDES.length} rides today · updating live`} />
+      <PageHeader title="Active rides" sub={loading ? 'Loading…' : `${rides.length} rides · updating live`} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Live now"    value="3"   change="En route"              changeUp iconBg="var(--voltage-100)" icon={<WpIcon name="activity" size={16} color="var(--voltage-700)" />} />
-        <StatCard label="Matched"     value="1"   change="Starting soon"         changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"    size={16} color="var(--ink-600)"     />} />
-        <StatCard label="Completed"   value="2"   change="Today so far"          changeUp iconBg="var(--success-100)" icon={<WpIcon name="check"    size={16} color="var(--success-700)" />} />
-        <StatCard label="Pending"     value="1"   change="Awaiting driver"               iconBg="var(--warning-100)" icon={<WpIcon name="clock"    size={16} color="var(--warning-700)" />} />
+        <StatCard label="Created"   value={rides.filter(r=>r.status==='CREATED').length}   change="Scheduled"   changeUp iconBg="var(--voltage-100)" icon={<WpIcon name="activity" size={16} color="var(--voltage-700)" />} />
+        <StatCard label="Active"    value={rides.filter(r=>r.status==='ACTIVE').length}    change="En route"    changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"    size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Completed" value={rides.filter(r=>r.status==='COMPLETED').length} change="Today so far" changeUp iconBg="var(--success-100)" icon={<WpIcon name="check"    size={16} color="var(--success-700)" />} />
+        <StatCard label="Cancelled" value={rides.filter(r=>r.status==='CANCELLED').length} change="Cancelled"           iconBg="var(--warning-100)" icon={<WpIcon name="clock"    size={16} color="var(--warning-700)" />} />
       </div>
       <Card style={{ overflow: 'hidden' }}>
         <CardHeader title="All rides" meta={`${filtered.length} showing`}>
@@ -352,24 +296,30 @@ function ActiveRidesPage() {
             ))}
           </div>
         </CardHeader>
+        {error && <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--danger-600)' }}>{error}</div>}
+        {loading && <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>Loading…</div>}
+        {!loading && !error && filtered.length === 0 && (
+          <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
+        )}
+        {!loading && !error && filtered.length > 0 && (
         <Table
-          cols={['Route', 'Driver', 'Riders', 'Status', 'Departs', 'ETA', 'Fare']}
+          cols={['Route', 'Driver', 'Seats', 'Status', 'Departs', 'Fare']}
           rows={filtered}
           renderRow={r => (<>
-            <TD><MiniRoute origin={r.origin} dest={r.dest} /></TD>
+            <TD><MiniRoute origin={r.pickupLabel || 'Pickup'} dest={r.dropoffLabel || 'Dropoff'} /></TD>
             <TD>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <WpAvatar initials={r.driver.split(' ').map(n=>n[0]).join('')} size={28} tone="ink" />
-                {r.driver}
+                <WpAvatar initials={(r.driverName || 'D').split(' ').map(n=>n[0]).join('')} size={28} tone="ink" />
+                {r.driverName || '—'}
               </div>
             </TD>
-            <TD mono>{r.riders} / {r.capacity}</TD>
+            <TD mono>{r.availableSeats ?? '—'} / {r.vehicleCapacity ?? '—'}</TD>
             <TD><StatusPill status={r.status} /></TD>
-            <TD mono muted>{r.dept}</TD>
-            <TD mono muted>{r.eta}</TD>
-            <TD mono bold>{r.fare}</TD>
+            <TD mono muted>{fmtTime(r.departureTime)}</TD>
+            <TD mono bold>{fmtFare(r.fare)}</TD>
           </>)}
         />
+        )}
       </Card>
     </>
   );
@@ -387,51 +337,12 @@ function SafetyPage() {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Card>
-          <CardHeader title="SOS incidents" meta={`${MOCK_SOS.length} today`} />
-          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {MOCK_SOS.map(s => (
-              <div key={s.id} style={{
-                padding: 16, borderRadius: 'var(--radius-md)',
-                border: `2px solid ${s.status === 'ACTIVE' ? 'var(--danger-500)' : 'var(--asphalt-200)'}`,
-                background: s.status === 'ACTIVE' ? 'var(--danger-100)' : 'var(--asphalt-50)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <StatusPill status={s.status} />
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)' }}>{s.time}</span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 4 }}>{s.rider}</div>
-                <div style={{ fontSize: 12, color: 'var(--asphalt-500)', fontFamily: 'var(--font-mono)', marginBottom: 4 }}>{s.route}</div>
-                <div style={{ fontSize: 12, color: 'var(--asphalt-600)' }}>Driver: {s.driver} · {s.contacts} contacts notified</div>
-                {s.status === 'ACTIVE' && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    <button style={{ flex: 1, padding: '8px 12px', background: 'var(--danger-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Respond now</button>
-                    <button style={{ flex: 1, padding: '8px 12px', background: '#fff', color: 'var(--asphalt-900)', border: '1px solid var(--asphalt-300)', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Call rider</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <CardHeader title="SOS incidents" meta="0 today" />
+          <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
         </Card>
         <Card>
-          <CardHeader title="Backup alerts" meta={`${MOCK_BACKUP.length} open`} />
-          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {MOCK_BACKUP.map(b => (
-              <div key={b.id} style={{ padding: 16, borderRadius: 'var(--radius-md)', border: '1.5px solid var(--warning-500)', background: 'var(--warning-100)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <StatusPill status={b.status} />
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-600)' }}>{b.time}</span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 4 }}>{b.route}</div>
-                <div style={{ fontSize: 12, color: 'var(--asphalt-600)', marginBottom: 8 }}>{b.riders} riders waiting</div>
-                <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)', marginBottom: b.status === 'PENDING' ? 10 : 0 }}>
-                  Available: {b.available.join(' · ')}
-                </div>
-                {b.status === 'PENDING' && (
-                  <button style={{ width: '100%', padding: '8px 12px', background: 'var(--ink-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Assign backup driver</button>
-                )}
-              </div>
-            ))}
-          </div>
+          <CardHeader title="Backup alerts" meta="0 open" />
+          <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
         </Card>
       </div>
     </>
@@ -448,36 +359,8 @@ function BackupDriversPage() {
         <StatCard label="Pending alerts" value="1"  change="Needs assignment"           iconBg="var(--warning-100)" icon={<WpIcon name="alert-triangle" size={16} color="var(--warning-700)" />} />
       </div>
       <Card style={{ overflow: 'hidden' }}>
-        <CardHeader title="Backup driver pool" meta={`${MOCK_VEHICLES.length} registered`} />
-        <Table
-          cols={['Driver', 'Vehicle', 'Plate', 'Seats', 'Status', 'Action']}
-          rows={MOCK_VEHICLES}
-          renderRow={v => {
-            const emp = MOCK_EMPLOYEES.find(e => e.name.startsWith(v.driver.split(' ')[0]));
-            const avail = v.status === 'ACTIVE';
-            return (<>
-              <TD>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <WpAvatar initials={v.driver.split(' ').map(n=>n[0]).join('')} size={32} tone={avail ? 'ink' : 'asphalt'} />
-                  <div>
-                    <div style={{ fontWeight: 600, color: 'var(--asphalt-900)' }}>{v.driver}</div>
-                    <div style={{ fontSize: 11, color: 'var(--asphalt-500)', fontFamily: 'var(--font-mono)' }}>★ {emp?.rating || '4.7'} · {emp?.rides || 0} rides</div>
-                  </div>
-                </div>
-              </TD>
-              <TD muted>{v.model}</TD>
-              <TD mono muted>{v.plate}</TD>
-              <TD mono>{v.seats}</TD>
-              <TD><StatusPill status={v.status} /></TD>
-              <td style={{ padding: '10px 16px' }}>
-                {avail
-                  ? <button style={{ padding: '6px 14px', borderRadius: 999, background: 'var(--ink-600)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Assign</button>
-                  : <span style={{ fontSize: 12, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>On route</span>
-                }
-              </td>
-            </>);
-          }}
-        />
+        <CardHeader title="Backup driver pool" meta="0 registered" />
+        <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
       </Card>
     </>
   );
@@ -486,7 +369,7 @@ function BackupDriversPage() {
 function RoutesPage() {
   return (
     <>
-      <PageHeader title="Routes" sub={`${MOCK_ROUTES.length} routes configured`} />
+      <PageHeader title="Routes" sub="0 routes configured" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
         <StatCard label="Active routes"   value="4"    change="Running today"  changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="map-pin" size={16} color="var(--ink-600)"     />} />
         <StatCard label="Total riders"    value="93"   change="Across all routes" changeUp iconBg="var(--voltage-100)" icon={<WpIcon name="users"   size={16} color="var(--voltage-700)" />} />
@@ -498,40 +381,39 @@ function RoutesPage() {
             <WpIcon name="plus" size={14} color="#fff" /> Add route
           </button>
         </CardHeader>
-        <Table
-          cols={['Route', 'Driver', 'Departs', 'Distance', 'Riders', 'Status']}
-          rows={MOCK_ROUTES}
-          renderRow={r => (<>
-            <TD><MiniRoute origin={r.origin} dest={r.dest} /></TD>
-            <TD>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <WpAvatar initials={r.driver.split(' ').map(n=>n[0]).join('')} size={28} tone="ink" />
-                {r.driver}
-              </div>
-            </TD>
-            <TD mono muted>{r.dept}</TD>
-            <TD mono muted>{r.dist}</TD>
-            <TD mono>{r.riders}</TD>
-            <TD><StatusPill status={r.status} /></TD>
-          </>)}
-        />
+        <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
       </Card>
     </>
   );
 }
 
-function EmployeesPage() {
+function EmployeesPage({ orgId }) {
   const [search, setSearch] = useState('');
-  const filtered = MOCK_EMPLOYEES.filter(e =>
-    e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase())
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!orgId) return;
+    setLoading(true);
+    setError(null);
+    api.get(`/users/organisation/${orgId}`)
+      .then(res => setEmployees(res.data?.data || []))
+      .catch(() => setError('Failed to load employees'))
+      .finally(() => setLoading(false));
+  }, [orgId]);
+
+  const filtered = employees.filter(e =>
+    (e.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (e.email || '').toLowerCase().includes(search.toLowerCase())
   );
   return (
     <>
-      <PageHeader title="Employees" sub={`${MOCK_EMPLOYEES.length} registered employees`} />
+      <PageHeader title="Employees" sub={loading ? 'Loading…' : `${employees.length} registered employees`} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Total employees" value={MOCK_EMPLOYEES.length} change="Across all orgs"   changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"    size={16} color="var(--ink-600)"     />} />
-        <StatCard label="Drivers"         value={MOCK_EMPLOYEES.filter(e=>e.role==='DRIVER').length} change="Active drivers" changeUp iconBg="var(--voltage-100)" icon={<WpIcon name="car"      size={16} color="var(--voltage-700)" />} />
-        <StatCard label="Passengers"      value={MOCK_EMPLOYEES.filter(e=>e.role==='PASSENGER').length} change="Active riders" changeUp iconBg="var(--success-100)" icon={<WpIcon name="user"     size={16} color="var(--success-700)" />} />
+        <StatCard label="Total employees" value={employees.length} change="Across all orgs"   changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"    size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Drivers"         value={employees.filter(e=>e.role==='DRIVER').length} change="Active drivers" changeUp iconBg="var(--voltage-100)" icon={<WpIcon name="car"      size={16} color="var(--voltage-700)" />} />
+        <StatCard label="Passengers"      value={employees.filter(e=>e.role==='PASSENGER').length} change="Active riders" changeUp iconBg="var(--success-100)" icon={<WpIcon name="user"     size={16} color="var(--success-700)" />} />
       </div>
       <Card style={{ overflow: 'hidden' }}>
         <CardHeader title="Employee directory" meta={`${filtered.length} showing`}>
@@ -542,18 +424,24 @@ function EmployeesPage() {
             style={{ padding: '7px 14px', borderRadius: 999, border: '1px solid var(--asphalt-200)', fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', width: 200 }}
           />
         </CardHeader>
+        {error && <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--danger-600)' }}>{error}</div>}
+        {loading && <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>Loading…</div>}
+        {!loading && !error && filtered.length === 0 && (
+          <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
+        )}
+        {!loading && !error && filtered.length > 0 && (
         <Table
-          cols={['Employee', 'Email', 'Org', 'Role', 'Rides', 'Rating']}
+          cols={['Employee', 'Email', 'Org', 'Role', 'Rating']}
           rows={filtered}
           renderRow={e => (<>
             <TD>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <WpAvatar initials={e.name.split(' ').map(n=>n[0]).join('')} size={32} tone={e.role === 'DRIVER' ? 'ink' : 'asphalt'} />
+                <WpAvatar initials={(e.name || 'U').split(' ').map(n=>n[0]).join('')} size={32} tone={e.role === 'DRIVER' ? 'ink' : 'asphalt'} />
                 <span style={{ fontWeight: 600 }}>{e.name}</span>
               </div>
             </TD>
             <TD mono muted>{e.email}</TD>
-            <TD muted>{e.org}</TD>
+            <TD muted>{e.organisationName || '—'}</TD>
             <TD>
               <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-sans)',
                 background: e.role === 'DRIVER' ? 'var(--ink-50)' : 'var(--asphalt-100)',
@@ -561,10 +449,10 @@ function EmployeesPage() {
                 {e.role}
               </span>
             </TD>
-            <TD mono>{e.rides}</TD>
-            <TD><Stars rating={e.rating} /></TD>
+            <TD><Stars rating={parseFloat(e.rating) || 0} /></TD>
           </>)}
         />
+        )}
       </Card>
     </>
   );
@@ -573,11 +461,11 @@ function EmployeesPage() {
 function VehiclesPage() {
   return (
     <>
-      <PageHeader title="Vehicles" sub={`${MOCK_VEHICLES.length} vehicles registered`} />
+      <PageHeader title="Vehicles" sub="0 vehicles registered" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Active"  value={MOCK_VEHICLES.filter(v=>v.status==='ACTIVE').length}   change="On road today" changeUp iconBg="var(--success-100)" icon={<WpIcon name="car"   size={16} color="var(--success-700)" />} />
-        <StatCard label="Inactive" value={MOCK_VEHICLES.filter(v=>v.status==='INACTIVE').length} change="Not active"           iconBg="var(--asphalt-100)" icon={<WpIcon name="x"     size={16} color="var(--asphalt-500)" />} />
-        <StatCard label="Avg seats" value="4.8" change="Fleet capacity"     changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users" size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Active"   value={0} change="On road today" changeUp iconBg="var(--success-100)" icon={<WpIcon name="car"   size={16} color="var(--success-700)" />} />
+        <StatCard label="Inactive" value={0} change="Not active"           iconBg="var(--asphalt-100)" icon={<WpIcon name="x"     size={16} color="var(--asphalt-500)" />} />
+        <StatCard label="Avg seats" value="—" change="Fleet capacity"     changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users" size={16} color="var(--ink-600)"     />} />
       </div>
       <Card style={{ overflow: 'hidden' }}>
         <CardHeader title="Fleet">
@@ -585,24 +473,7 @@ function VehiclesPage() {
             <WpIcon name="plus" size={14} color="#fff" /> Add vehicle
           </button>
         </CardHeader>
-        <Table
-          cols={['Driver', 'Model', 'Plate', 'Type', 'Seats', 'Fuel', 'Status']}
-          rows={MOCK_VEHICLES}
-          renderRow={v => (<>
-            <TD>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <WpAvatar initials={v.driver.split(' ').map(n=>n[0]).join('')} size={28} tone="ink" />
-                {v.driver}
-              </div>
-            </TD>
-            <TD>{v.model}</TD>
-            <TD mono>{v.plate}</TD>
-            <TD muted>{v.type}</TD>
-            <TD mono>{v.seats}</TD>
-            <TD muted>{v.fuel}</TD>
-            <TD><StatusPill status={v.status} /></TD>
-          </>)}
-        />
+        <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
       </Card>
     </>
   );
@@ -617,141 +488,72 @@ function RatingsPage() {
         <StatCard label="Total reviews"     value="450"  change="All time"        changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users" size={16} color="var(--ink-600)"     />} />
         <StatCard label="5-star rides"      value="72%"  change="↑2pts vs last month" changeUp iconBg="var(--success-100)" icon={<WpIcon name="check" size={16} color="var(--success-700)" />} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {MOCK_RATINGS.map(r => (
-          <Card key={r.driver} style={{ padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <WpAvatar initials={r.initials} size={44} tone="ink" />
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)' }}>{r.driver}</div>
-                <div style={{ fontSize: 12, color: 'var(--asphalt-500)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>{r.total} rides · driver</div>
-              </div>
-              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em' }}>{r.avg}</div>
-                <div style={{ color: '#f5a524', fontSize: 14 }}>★★★★★</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <RatingBar label="5" count={r.five}  total={r.total} />
-              <RatingBar label="4" count={r.four}  total={r.total} />
-              <RatingBar label="3" count={r.three} total={r.total} />
-              <RatingBar label="2" count={r.two}   total={r.total} />
-              <RatingBar label="1" count={r.one}   total={r.total} />
-            </div>
-          </Card>
-        ))}
-      </div>
+      <Card style={{ padding: '32px 20px' }}>
+        <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
+      </Card>
     </>
   );
 }
 
 function TransactionsPage() {
-  const txnTone = { PAID: 'completed', PENDING: 'warn', REFUNDED: 'cancelled' };
-  const total = MOCK_TRANSACTIONS.filter(t=>t.status==='PAID').reduce((s,t) => s + parseInt(t.amount.replace(/[₹,]/g,'')), 0);
   return (
     <>
       <PageHeader title="Transactions" sub="Fare payments and Razorpay settlements" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Total collected" value={`₹${total.toLocaleString('en-IN')}`} change="Today" changeUp iconBg="var(--success-100)" icon={<WpIcon name="wallet"    size={16} color="var(--success-700)" />} />
-        <StatCard label="Paid"    value={MOCK_TRANSACTIONS.filter(t=>t.status==='PAID').length}    change="Settled"         changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="check"      size={16} color="var(--ink-600)"     />} />
-        <StatCard label="Pending" value={MOCK_TRANSACTIONS.filter(t=>t.status==='PENDING').length} change="Awaiting"                iconBg="var(--warning-100)" icon={<WpIcon name="clock"      size={16} color="var(--warning-700)" />} />
-        <StatCard label="Refunded" value={MOCK_TRANSACTIONS.filter(t=>t.status==='REFUNDED').length} change="Returned"              iconBg="var(--asphalt-100)" icon={<WpIcon name="arrow-right" size={16} color="var(--asphalt-500)" />} />
+        <StatCard label="Total collected" value="₹0"    change="Today" changeUp iconBg="var(--success-100)" icon={<WpIcon name="wallet"    size={16} color="var(--success-700)" />} />
+        <StatCard label="Paid"    value={0} change="Settled"         changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="check"      size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Pending" value={0} change="Awaiting"                iconBg="var(--warning-100)" icon={<WpIcon name="clock"      size={16} color="var(--warning-700)" />} />
+        <StatCard label="Refunded" value={0} change="Returned"              iconBg="var(--asphalt-100)" icon={<WpIcon name="arrow-right" size={16} color="var(--asphalt-500)" />} />
       </div>
       <Card style={{ overflow: 'hidden' }}>
-        <CardHeader title="Payment history" meta={`${MOCK_TRANSACTIONS.length} transactions`} />
-        <Table
-          cols={['ID', 'Rider', 'Driver', 'Route', 'Amount', 'Method', 'Date', 'Status']}
-          rows={MOCK_TRANSACTIONS}
-          renderRow={t => (<>
-            <TD mono muted>{t.id}</TD>
-            <TD>{t.rider}</TD>
-            <TD muted>{t.driver}</TD>
-            <td style={{ padding: '14px 16px', fontSize: 12, color: 'var(--asphalt-600)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.route}</td>
-            <TD mono bold>{t.amount}</TD>
-            <TD muted>{t.method}</TD>
-            <TD mono muted>{t.date}</TD>
-            <TD><WpPill tone={txnTone[t.status] || 'matched'}>{t.status}</WpPill></TD>
-          </>)}
-        />
+        <CardHeader title="Payment history" meta="0 transactions" />
+        <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
       </Card>
     </>
   );
 }
 
 function ReimbursementsPage() {
-  const rmbTone = { APPROVED: 'completed', PENDING: 'warn', REJECTED: 'sos' };
-  const approved = MOCK_REIMBURSEMENTS.filter(r=>r.status==='APPROVED').reduce((s,r) => s + parseInt(r.amount.replace(/[₹,]/g,'')), 0);
   return (
     <>
       <PageHeader title="Reimbursements" sub="Employee transport expense claims" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Total approved" value={`₹${approved.toLocaleString('en-IN')}`} change="Apr 2026" changeUp iconBg="var(--success-100)" icon={<WpIcon name="wallet" size={16} color="var(--success-700)" />} />
-        <StatCard label="Approved" value={MOCK_REIMBURSEMENTS.filter(r=>r.status==='APPROVED').length}  change="Processed"  changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="check" size={16} color="var(--ink-600)"     />} />
-        <StatCard label="Pending"  value={MOCK_REIMBURSEMENTS.filter(r=>r.status==='PENDING').length}   change="Awaiting review"   iconBg="var(--warning-100)" icon={<WpIcon name="clock" size={16} color="var(--warning-700)" />} />
-        <StatCard label="Rejected" value={MOCK_REIMBURSEMENTS.filter(r=>r.status==='REJECTED').length}  change="Declined"           danger iconBg="var(--danger-100)"  icon={<WpIcon name="x"     size={16} color="var(--danger-600)"  />} />
+        <StatCard label="Total approved" value="₹0" change="No data" changeUp iconBg="var(--success-100)" icon={<WpIcon name="wallet" size={16} color="var(--success-700)" />} />
+        <StatCard label="Approved" value={0} change="Processed"  changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="check" size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Pending"  value={0} change="Awaiting review"   iconBg="var(--warning-100)" icon={<WpIcon name="clock" size={16} color="var(--warning-700)" />} />
+        <StatCard label="Rejected" value={0} change="Declined"           danger iconBg="var(--danger-100)"  icon={<WpIcon name="x"     size={16} color="var(--danger-600)"  />} />
       </div>
       <Card style={{ overflow: 'hidden' }}>
-        <CardHeader title="Claims · Apr 2026" meta={`${MOCK_REIMBURSEMENTS.length} total`} />
-        <Table
-          cols={['ID', 'Employee', 'Org', 'Rides', 'Amount', 'Period', 'Status', 'Action']}
-          rows={MOCK_REIMBURSEMENTS}
-          renderRow={r => (<>
-            <TD mono muted>{r.id}</TD>
-            <TD>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <WpAvatar initials={r.employee.split(' ').map(n=>n[0]).join('')} size={28} tone="asphalt" />
-                {r.employee}
-              </div>
-            </TD>
-            <TD muted>{r.org}</TD>
-            <TD mono>{r.rides}</TD>
-            <TD mono bold>{r.amount}</TD>
-            <TD mono muted>{r.period}</TD>
-            <TD><WpPill tone={rmbTone[r.status] || 'matched'}>{r.status}</WpPill></TD>
-            <td style={{ padding: '10px 16px' }}>
-              {r.status === 'PENDING' && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button style={{ padding: '5px 12px', borderRadius: 999, background: 'var(--success-500)', color: '#fff', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Approve</button>
-                  <button style={{ padding: '5px 12px', borderRadius: 999, background: 'var(--asphalt-100)', color: 'var(--asphalt-700)', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Reject</button>
-                </div>
-              )}
-            </td>
-          </>)}
-        />
+        <CardHeader title="Claims" meta="0 total" />
+        <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
       </Card>
     </>
   );
 }
 
-const MOCK_USERS = [
-  { id: 'U001', name: 'Aarav Joshi',   email: 'aarav@acme.com',   role: 'PASSENGER', status: 'ACTIVE',    joined: 'Jan 2026', rides: 48 },
-  { id: 'U002', name: 'Priya Sharma',  email: 'priya@acme.com',   role: 'DRIVER',    status: 'ACTIVE',    joined: 'Dec 2025', rides: 132 },
-  { id: 'U003', name: 'Meera Nair',    email: 'meera@zomato.com', role: 'PASSENGER', status: 'ACTIVE',    joined: 'Feb 2026', rides: 24 },
-  { id: 'U004', name: 'Kiran Das',     email: 'kiran@acme.com',   role: 'DRIVER',    status: 'ACTIVE',    joined: 'Nov 2025', rides: 89 },
-  { id: 'U005', name: 'Sneha Patel',   email: 'sneha@zomato.com', role: 'DRIVER',    status: 'SUSPENDED', joined: 'Mar 2026', rides: 67 },
-  { id: 'U006', name: 'Rahul Gupta',   email: 'rahul@acme.com',   role: 'PASSENGER', status: 'ACTIVE',    joined: 'Jan 2026', rides: 35 },
-  { id: 'U007', name: 'Anita Mehta',   email: 'anita@zomato.com', role: 'PASSENGER', status: 'ACTIVE',    joined: 'Apr 2026', rides: 19 },
-  { id: 'U008', name: 'Vijay Kumar',   email: 'vijay@acme.com',   role: 'DRIVER',    status: 'ACTIVE',    joined: 'Oct 2025', rides: 104 },
-];
-
-const MOCK_KYC = [
-  { id: 'K001', name: 'Ravi Teja',    email: 'ravi@startup.in',  submitted: 'May 4, 2026', license: true, rc: true,  insurance: false, status: 'PENDING'  },
-  { id: 'K002', name: 'Divya Menon',  email: 'divya@acme.com',   submitted: 'May 3, 2026', license: true, rc: false, insurance: false, status: 'PENDING'  },
-  { id: 'K003', name: 'Arjun Mehta',  email: 'arjun@acme.com',   submitted: 'May 2, 2026', license: true, rc: true,  insurance: true,  status: 'APPROVED' },
-];
-
-function UsersPage() {
+function UsersPage({ orgId }) {
   const [search, setSearch] = useState('');
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!orgId) return;
+    setLoading(true);
+    setError(null);
+    api.get(`/users/organisation/${orgId}`)
+      .then(res => setUsers(res.data?.data || []))
+      .catch(() => setError('Failed to load users'))
+      .finally(() => setLoading(false));
+  }, [orgId]);
+
   const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(search.toLowerCase())
   );
-  const toggleSuspend = (id) => {
-    setUsers(us => us.map(u => u.id === id ? { ...u, status: u.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' } : u));
-  };
   return (
     <>
-      <PageHeader title="Users" sub={`${users.length} registered users`} />
+      <PageHeader title="Users" sub={loading ? 'Loading…' : `${users.length} registered users`} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         <StatCard label="Total users"   value={users.length}                                           change="All time"        changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="users"  size={16} color="var(--ink-600)"     />} />
         <StatCard label="Drivers"       value={users.filter(u=>u.role==='DRIVER').length}              change="Active"          changeUp iconBg="var(--voltage-100)" icon={<WpIcon name="car"    size={16} color="var(--voltage-700)" />} />
@@ -766,17 +568,24 @@ function UsersPage() {
             style={{ padding: '7px 14px', borderRadius: 999, border: '1px solid var(--asphalt-200)', fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', width: 200 }}
           />
         </CardHeader>
+        {error && <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--danger-600)' }}>{error}</div>}
+        {loading && <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>Loading…</div>}
+        {!loading && !error && filtered.length === 0 && (
+          <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--asphalt-400)' }}>No data available</div>
+        )}
+        {!loading && !error && filtered.length > 0 && (
         <Table
-          cols={['User', 'Email', 'Role', 'Status', 'Joined', 'Rides', 'Action']}
+          cols={['User', 'Email', 'Org', 'Role', 'Driver status', 'Rating']}
           rows={filtered}
           renderRow={u => (<>
             <TD>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <WpAvatar initials={u.name.split(' ').map(n=>n[0]).join('')} size={32} tone={u.role === 'DRIVER' ? 'ink' : 'asphalt'} />
+                <WpAvatar initials={(u.name || 'U').split(' ').map(n=>n[0]).join('')} size={32} tone={u.role === 'DRIVER' ? 'ink' : 'asphalt'} />
                 <span style={{ fontWeight: 600 }}>{u.name}</span>
               </div>
             </TD>
             <TD mono muted>{u.email}</TD>
+            <TD muted>{u.organisationName || '—'}</TD>
             <TD>
               <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
                 background: u.role === 'DRIVER' ? 'var(--ink-50)' : 'var(--asphalt-100)',
@@ -784,20 +593,11 @@ function UsersPage() {
                 {u.role}
               </span>
             </TD>
-            <TD><StatusPill status={u.status} /></TD>
-            <TD mono muted>{u.joined}</TD>
-            <TD mono>{u.rides}</TD>
-            <td style={{ padding: '10px 16px' }}>
-              <button
-                onClick={() => toggleSuspend(u.id)}
-                style={{ padding: '5px 12px', borderRadius: 999, border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                  background: u.status === 'SUSPENDED' ? 'var(--success-500)' : 'var(--danger-500)', color: '#fff' }}
-              >
-                {u.status === 'SUSPENDED' ? 'Reinstate' : 'Suspend'}
-              </button>
-            </td>
+            <TD muted>{u.driverStatus || '—'}</TD>
+            <TD><Stars rating={parseFloat(u.rating) || 0} /></TD>
           </>)}
         />
+        )}
       </Card>
     </>
   );
@@ -956,6 +756,7 @@ export default function AdminDashboard() {
   const { currentUser, logout } = useAuth();
   const [orgs, setOrgs] = useState([]);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [orgId, setOrgId] = useState(null);
   const [activeNav, setActiveNav] = useState('overview');
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -966,6 +767,16 @@ export default function AdminDashboard() {
       .catch(() => setOrgs([]));
   }, []);
 
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    api.get(`/users/${currentUser.id}`)
+      .then(res => {
+        const id = res.data?.data?.organisationId || res.data?.organisationId;
+        if (id) setOrgId(id);
+      })
+      .catch(() => {});
+  }, [currentUser?.id]);
+
   function renderPage() {
     switch (activeNav) {
       case 'overview':        return <OverviewPage today={today} />;
@@ -973,9 +784,9 @@ export default function AdminDashboard() {
       case 'safety':          return <SafetyPage />;
       case 'backup':          return <BackupDriversPage />;
       case 'routes':          return <RoutesPage />;
-      case 'users':           return <UsersPage />;
+      case 'users':           return <UsersPage orgId={orgId} />;
       case 'kyc':             return <DriverKycPage />;
-      case 'employees':       return <EmployeesPage />;
+      case 'employees':       return <EmployeesPage orgId={orgId} />;
       case 'vehicles':        return <VehiclesPage />;
       case 'ratings':         return <RatingsPage />;
       case 'transactions':    return <TransactionsPage />;

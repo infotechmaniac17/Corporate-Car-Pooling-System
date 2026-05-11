@@ -24,7 +24,8 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!token && !!currentUser;
   const isDriver = currentUser?.role === 'DRIVER' || currentUser?.role === 'BOTH';
-  const isAdmin = currentUser?.role === 'ADMIN';
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isPendingDriver = currentUser?.driverStatus === 'PENDING';
   const isBothRole = currentUser?.driverStatus === 'APPROVED' && currentUser?.passengerStatus === 'APPROVED';
 
@@ -104,7 +105,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      currentUser, token, isAuthenticated, isDriver, isAdmin,
+      currentUser, token, isAuthenticated, isDriver, isAdmin, isSuperAdmin,
       isPendingDriver, isBothRole, pendingRoleSelection,
       activeMode, setActiveMode,
       login, confirmRole, logout, register, updateUser,

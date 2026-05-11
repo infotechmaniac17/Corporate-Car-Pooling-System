@@ -3,8 +3,10 @@ package com.carpooling.service;
 import com.carpooling.dto.request.CancelScheduleRequest;
 import com.carpooling.dto.request.CreateRideScheduleRequest;
 import com.carpooling.dto.response.RideScheduleResponse;
+import com.carpooling.enums.GenderPreference;
 import com.carpooling.enums.ScheduleStatus;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface RideScheduleService {
@@ -13,4 +15,5 @@ public interface RideScheduleService {
     List<RideScheduleResponse> getDriverSchedules(Long driverId);
     RideScheduleResponse updateStatus(Long scheduleId, Long driverId, ScheduleStatus newStatus);
     void cancelSchedule(Long scheduleId, Long driverId, CancelScheduleRequest request);
+    List<RideScheduleResponse> searchSchedules(String driverName, LocalDate departureDate, Short availableSeats, GenderPreference gender);
 }

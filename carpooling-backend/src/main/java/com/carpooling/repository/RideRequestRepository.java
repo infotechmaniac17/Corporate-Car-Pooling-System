@@ -17,6 +17,8 @@ public interface RideRequestRepository extends JpaRepository<RideRequest, Long> 
 
     List<RideRequest> findByRideScheduleIdAndStatus(Long rideScheduleId, RequestStatus status);
 
+    List<RideRequest> findByRideScheduleIdAndStatusIn(Long rideScheduleId, Collection<RequestStatus> statuses);
+
     boolean existsByRideScheduleIdAndPassengerId(Long rideScheduleId, Long passengerId);
 
     boolean existsByPassengerIdAndStatusIn(Long passengerId, Collection<RequestStatus> statuses);

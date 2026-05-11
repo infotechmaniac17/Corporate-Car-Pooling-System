@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -43,4 +44,21 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
         WHERE rs.id = :id
         """)
     java.util.Optional<RideSchedule> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("""
+        SELECT rs FROM RideSchedule rs
+        JOIN FETCH rs.driver
+        JOIN FETCH rs.vehicle
+        LEFT JOIN FETCH rs.route
+        WHERE rs.status = com.carpooling.enums.ScheduleStatus.CREATED
+          AND (:driverName IS NULL OR LOWER(rs.driver.name) LIKE LOWER(CONCAT('%', :driverName, '%')))
+          AND (:departureDate IS NULL OR CAST(rs.departureTime AS date) = :departureDate)
+          AND (:availableSeats IS NULL OR rs.availableSeats >= :availableSeats)
+          AND (:gender IS NULL OR rs.genderPreference = :gender OR rs.genderPreference = com.carpooling.enums.GenderPreference.ANY)
+        """)
+    List<RideSchedule> searchSchedules(
+            @Param("driverName") String driverName,
+            @Param("departureDate") LocalDate departureDate,
+            @Param("availableSeats") Short availableSeats,
+            @Param("gender") com.carpooling.enums.GenderPreference gender);
 }

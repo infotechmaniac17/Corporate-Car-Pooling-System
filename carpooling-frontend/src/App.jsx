@@ -20,6 +20,7 @@ import DriverOfferRideScreen from './screens/DriverOfferRideScreen';
 import DriverMyRidesScreen from './screens/DriverMyRidesScreen';
 import DriverVehiclesScreen from './screens/DriverVehiclesScreen';
 import AdminDashboard from './admin/AdminDashboard';
+import SuperAdminDashboard from './admin/SuperAdminDashboard';
 import WebLogin from './admin/WebLogin';
 import AppShell from './components/AppShell';
 import PendingApprovalScreen from './screens/PendingApprovalScreen';
@@ -67,7 +68,7 @@ function DriverModeModal({ onClose, onSwitch }) {
 // ─── Guards ───────────────────────────────────────────────────────────────────
 
 function RootRedirect() {
-  const { isAuthenticated, isAdmin, isPendingDriver } = useAuth();
+  const { isAuthenticated, isAdmin, isSuperAdmin, isPendingDriver } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
 
@@ -81,15 +82,17 @@ function RootRedirect() {
       </div>
     );
   }
-  return <Navigate to={isAdmin ? '/admin' : isPendingDriver ? '/pending-approval' : '/home'} replace />;
+  return <Navigate to={isSuperAdmin ? '/super-admin' : isAdmin ? '/admin' : isPendingDriver ? '/pending-approval' : '/home'} replace />;
 }
 
 function UserRoute({ children, driverOnly = false, activityState }) {
-  const { isAuthenticated, isAdmin, isDriver, activeMode, setActiveMode } = useAuth();
+  const { isAuthenticated, isAdmin, isSuperAdmin, isDriver, activeMode, setActiveMode } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (isSuperAdmin) return <Navigate to="/super-admin" replace />;
+  if (isAdmin) return <Navigate to="/admin" replace />;
 
   if (driverOnly && !isAdmin) {
     if (!isDriver) return <Navigate to="/home" replace />;
@@ -114,6 +117,13 @@ function AdminRoute({ children }) {
   const { isAuthenticated, isAdmin } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/home" replace />;
+  return <>{children}</>;
+}
+
+function SuperAdminRoute({ children }) {
+  const { isAuthenticated, isSuperAdmin } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isSuperAdmin) return <Navigate to="/home" replace />;
   return <>{children}</>;
 }
 
@@ -175,7 +185,8 @@ export default function App() {
       <Route path="/reset-password"  element={<ResetPasswordScreen />} />
 
       {/* Admin */}
-      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/admin"       element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/super-admin" element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
 
       {/* Rider / driver */}
       <Route path="/home"             element={<U activityState={activityState}><HomeScreen activityState={activityState} /></U>} />

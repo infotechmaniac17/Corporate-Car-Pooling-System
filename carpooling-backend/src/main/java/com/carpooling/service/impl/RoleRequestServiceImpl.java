@@ -89,8 +89,11 @@ public class RoleRequestServiceImpl implements RoleRequestService {
     }
 
     @Override
-    public List<RoleRequestResponse> listByStatus(VerificationStatus status) {
-        return roleRequestRepository.findByStatus(status).stream()
+    public List<RoleRequestResponse> listByStatus(VerificationStatus status, Long adminId) {
+        User admin = userRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", adminId));
+        Long orgId = admin.getOrganisation().getId();
+        return roleRequestRepository.findByStatusAndUserOrganisationId(status, orgId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -112,6 +115,10 @@ public class RoleRequestServiceImpl implements RoleRequestService {
         }
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", adminId));
+
+        if (!request.getUser().getOrganisation().getId().equals(admin.getOrganisation().getId())) {
+            throw new BusinessException("Cannot approve request from a different organisation");
+        }
 
         request.setStatus(VerificationStatus.APPROVED);
         request.setAdmin(admin);
@@ -141,6 +148,10 @@ public class RoleRequestServiceImpl implements RoleRequestService {
         }
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", adminId));
+
+        if (!request.getUser().getOrganisation().getId().equals(admin.getOrganisation().getId())) {
+            throw new BusinessException("Cannot reject request from a different organisation");
+        }
 
         request.setStatus(VerificationStatus.REJECTED);
         request.setAdmin(admin);
