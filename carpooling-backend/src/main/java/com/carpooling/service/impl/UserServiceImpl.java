@@ -135,6 +135,13 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         User user = userRepository.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
+        if (Boolean.TRUE.equals(user.getIsSuspended())) {
+            throw new BusinessException("Your account has been suspended. Please contact your administrator.");
+        }
+        if (user.getOrganisation().getStatus() == com.carpooling.enums.OrganisationStatus.SUSPENDED) {
+            throw new BusinessException("Your organisation has been suspended. Please contact the platform administrator.");
+        }
+
         if (user.getRole() == com.carpooling.enums.UserRole.BOTH) {
             // Don't issue a real JWT yet — return a flag so frontend shows role selector
             AuthResponse response = new AuthResponse();
@@ -289,6 +296,24 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public UserResponse suspendUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        user.setIsSuspended(true);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse activateUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        user.setIsSuspended(false);
+        return toResponse(userRepository.save(user));
+    }
+
     private UserResponse toResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -309,6 +334,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .secondaryAddress(user.getSecondaryAddress())
                 .secondaryLat(user.getSecondaryLat())
                 .secondaryLng(user.getSecondaryLng())
+                .isSuspended(user.getIsSuspended())
+                .officeId(user.getOffice() != null ? user.getOffice().getId() : null)
+                .officeName(user.getOffice() != null ? user.getOffice().getName() : null)
                 .build();
     }
 }
