@@ -86,11 +86,13 @@ function RootRedirect() {
 }
 
 function UserRoute({ children, driverOnly = false, activityState }) {
-  const { isAuthenticated, isAdmin, isDriver, activeMode, setActiveMode } = useAuth();
+  const { isAuthenticated, isAdmin, isSuperAdmin, isDriver, activeMode, setActiveMode } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (isSuperAdmin) return <Navigate to="/super-admin" replace />;
+  if (isAdmin) return <Navigate to="/admin" replace />;
 
   if (driverOnly && !isAdmin) {
     if (!isDriver) return <Navigate to="/home" replace />;

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import WpIcon from '../components/WpIcon';
+import WpAvatar from '../components/WpAvatar';
+import WpPill from '../components/WpPill';
 import api from '../api/client';
 
-// ─── Shared sub-components (mirror AdminDashboard pattern exactly) ─────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function PageHeader({ title, sub }) {
   return (
@@ -84,35 +87,31 @@ function TD({ children, mono, bold, muted }) {
   );
 }
 
-function StatCard({ label, value, sub, iconBg, iconChar }) {
+function StatCard({ label, value, change, changeUp, danger, icon, iconBg, sub }) {
   return (
-    <Card style={{ padding: 20 }}>
+    <Card style={{ padding: 20, ...(danger ? { borderColor: 'var(--danger-500)' } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--asphalt-500)' }}>{label}</span>
-        <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: iconBg || 'var(--ink-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-          {iconChar}
+        <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: iconBg || 'var(--ink-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {icon}
         </div>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--asphalt-900)', marginBottom: 4 }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>{sub}</div>}
+      <div style={{ fontSize: 28, fontWeight: 800, color: danger ? 'var(--danger-600)' : 'var(--asphalt-900)', marginBottom: 6 }}>{value}</div>
+      {(change || sub) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600,
+          color: danger ? 'var(--danger-600)' : changeUp ? 'var(--success-700)' : 'var(--asphalt-400)',
+          fontFamily: 'var(--font-mono)' }}>
+          {changeUp && <WpIcon name="trending-up" size={14} color="var(--success-700)" />}
+          {change || sub}
+        </div>
+      )}
     </Card>
   );
 }
 
-function OrgStatusBadge({ status }) {
-  const isPending = status === 'PENDING';
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: '3px 10px', borderRadius: 999,
-      fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-mono)',
-      background: isPending ? '#fef9c3' : '#dcfce7',
-      color: isPending ? '#854d0e' : '#166534',
-      border: `1px solid ${isPending ? '#fde047' : '#86efac'}`,
-    }}>
-      {status}
-    </span>
-  );
+function OrgStatusPill({ status }) {
+  const tone = status === 'ACTIVE' ? 'live' : status === 'PENDING' ? 'warn' : 'cancelled';
+  return <WpPill tone={tone}>{status}</WpPill>;
 }
 
 function FormField({ label, children }) {
@@ -139,10 +138,7 @@ const inputStyle = {
   boxSizing: 'border-box',
 };
 
-const selectStyle = {
-  ...inputStyle,
-  cursor: 'pointer',
-};
+const selectStyle = { ...inputStyle, cursor: 'pointer' };
 
 function Alert({ type, children }) {
   const isError = type === 'error';
@@ -172,9 +168,9 @@ function OverviewPage({ orgs }) {
     <>
       <PageHeader title="Platform overview" sub="All organisations across the Waypoint network" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Total organisations" value={total}   sub="Registered on platform" iconBg="var(--ink-50)"      iconChar="🏢" />
-        <StatCard label="Active"              value={active}  sub="Onboarded & running"    iconBg="var(--success-100)" iconChar="✅" />
-        <StatCard label="Pending activation"  value={pending} sub="Awaiting activation"    iconBg="#fef9c3"            iconChar="⏳" />
+        <StatCard label="Total organisations" value={total}  change="Registered on platform" changeUp iconBg="var(--ink-50)"      icon={<WpIcon name="building"  size={16} color="var(--ink-600)"     />} />
+        <StatCard label="Active"              value={active} change="Onboarded & running"    changeUp iconBg="var(--success-100)" icon={<WpIcon name="check"     size={16} color="var(--success-700)" />} />
+        <StatCard label="Pending activation"  value={pending} change={pending > 0 ? 'Awaiting activation' : 'None pending'} danger={pending > 0} iconBg="var(--warning-100)" icon={<WpIcon name="clock" size={16} color="var(--warning-700)" />} />
       </div>
       <Card style={{ overflow: 'hidden' }}>
         <CardHeader title="All organisations" meta={`${total} total`} />
@@ -192,7 +188,7 @@ function OverviewPage({ orgs }) {
               <td style={{ padding: '14px 16px', fontSize: 13, color: 'var(--asphalt-600)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {o.officeAddress || '—'}
               </td>
-              <TD><OrgStatusBadge status={o.status} /></TD>
+              <TD><OrgStatusPill status={o.status} /></TD>
               <TD mono muted>—</TD>
             </>)}
           />
@@ -248,7 +244,7 @@ function OrganisationsPage({ orgs, onRefresh }) {
       await api.post(`/organisations/${id}/activate`);
       onRefresh();
     } catch {
-      // silent — table will not change
+      // silent
     } finally {
       setActivatingId(null);
     }
@@ -308,9 +304,10 @@ function OrganisationsPage({ orgs, onRefresh }) {
           {!showForm && (
             <button onClick={() => setShowForm(true)} style={{
               padding: '7px 16px', borderRadius: 999, background: 'var(--ink-950)', color: '#fff',
-              border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
             }}>
-              + Add Organisation
+              <WpIcon name="plus" size={13} color="#fff" /> Add Organisation
             </button>
           )}
         </CardHeader>
@@ -323,12 +320,17 @@ function OrganisationsPage({ orgs, onRefresh }) {
             cols={['Name', 'Domain', 'Office Address', 'Status', 'Action']}
             rows={orgs}
             renderRow={o => (<>
-              <TD bold>{o.name}</TD>
+              <TD bold>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <WpAvatar initials={o.name.split(' ').map(n => n[0]).join('').slice(0, 2)} size={28} tone="asphalt" />
+                  {o.name}
+                </div>
+              </TD>
               <TD mono muted>{o.domain}</TD>
               <td style={{ padding: '14px 16px', fontSize: 13, color: 'var(--asphalt-600)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {o.officeAddress || '—'}
               </td>
-              <TD><OrgStatusBadge status={o.status} /></TD>
+              <TD><OrgStatusPill status={o.status} /></TD>
               <td style={{ padding: '10px 16px' }}>
                 {o.status === 'PENDING' ? (
                   <button
@@ -345,7 +347,9 @@ function OrganisationsPage({ orgs, onRefresh }) {
                     {activatingId === o.id ? 'Activating…' : 'Activate'}
                   </button>
                 ) : (
-                  <span style={{ fontSize: 12, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>Active</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--success-700)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                    <WpIcon name="check" size={13} color="var(--success-700)" /> Active
+                  </span>
                 )}
               </td>
             </>)}
@@ -420,15 +424,9 @@ function CreateAdminPage({ orgs }) {
           )}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <FormField label="Organisation">
-              <select
-                style={selectStyle}
-                value={form.organisationId}
-                onChange={e => handleChange('organisationId', e.target.value)}
-              >
+              <select style={selectStyle} value={form.organisationId} onChange={e => handleChange('organisationId', e.target.value)}>
                 <option value="">Select organisation…</option>
-                {activeOrgs.map(o => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
+                {activeOrgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                 {activeOrgs.length === 0 && orgs.filter(o => o.status !== 'ACTIVE').map(o => (
                   <option key={o.id} value={o.id}>{o.name} (pending)</option>
                 ))}
@@ -483,10 +481,20 @@ function CreateAdminPage({ orgs }) {
 
 // ─── Sidebar nav config ───────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
-  { id: 'overview',      label: 'Overview' },
-  { id: 'organisations', label: 'Organisations' },
-  { id: 'create-admin',  label: 'Create Admin' },
+const NAV_SECTIONS = [
+  {
+    label: 'Platform',
+    items: [
+      { id: 'overview', label: 'Overview', live: true },
+    ],
+  },
+  {
+    label: 'Manage',
+    items: [
+      { id: 'organisations', label: 'Organisations' },
+      { id: 'create-admin',  label: 'Create Admin' },
+    ],
+  },
 ];
 
 // ─── Root component ───────────────────────────────────────────────────────────
@@ -532,7 +540,7 @@ export default function SuperAdminDashboard() {
         display: 'flex', flexDirection: 'column',
         position: 'fixed', top: 0, bottom: 0, left: 0, overflowY: 'auto', zIndex: 50,
       }}>
-        {/* Logo */}
+        {/* Logo + access level */}
         <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <svg width="32" height="32" viewBox="0 0 44 44" fill="none">
@@ -545,7 +553,7 @@ export default function SuperAdminDashboard() {
           <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Access level</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 14 }}>⚡</span>
+              <WpIcon name="shield" size={14} color="var(--voltage-400)" />
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--voltage-400)' }}>Super Admin</span>
             </div>
           </div>
@@ -553,45 +561,44 @@ export default function SuperAdminDashboard() {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: 12 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', marginBottom: 6, padding: '0 8px' }}>
-            Platform
-          </div>
-          {NAV_ITEMS.map(item => {
-            const isActive = activeNav === item.id;
-            return (
-              <button key={item.id} onClick={() => setActiveNav(item.id)} style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                padding: '9px 10px', borderRadius: 'var(--radius-md)',
-                background: isActive ? 'var(--voltage-400)' : 'transparent',
-                border: 'none', cursor: 'pointer',
-                color: isActive ? 'var(--ink-950)' : 'rgba(255,255,255,0.55)',
-                fontSize: 13, fontWeight: isActive ? 700 : 500,
-                fontFamily: 'var(--font-sans)', textAlign: 'left', marginBottom: 2,
-                transition: 'all 0.1s',
-              }}
-                onMouseEnter={e => {
-                  if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#fff'; }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }
-                }}
-              >
-                <span style={{ flex: 1 }}>{item.label}</span>
-              </button>
-            );
-          })}
+          {NAV_SECTIONS.map(section => (
+            <div key={section.label} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', marginBottom: 6, padding: '0 8px' }}>
+                {section.label}
+              </div>
+              {section.items.map(item => {
+                const isActive = activeNav === item.id;
+                return (
+                  <button key={item.id} onClick={() => setActiveNav(item.id)} style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '9px 10px', borderRadius: 'var(--radius-md)',
+                    background: isActive ? 'var(--voltage-400)' : 'transparent',
+                    border: 'none', cursor: 'pointer',
+                    color: isActive ? 'var(--ink-950)' : 'rgba(255,255,255,0.55)',
+                    fontSize: 13, fontWeight: isActive ? 700 : 500,
+                    fontFamily: 'var(--font-sans)', textAlign: 'left', marginBottom: 2,
+                    transition: 'all 0.1s',
+                  }}
+                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#fff'; } }}
+                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; } }}
+                  >
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {item.live && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: isActive ? 'var(--ink-950)' : 'var(--voltage-400)', fontFamily: 'var(--font-mono)' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: isActive ? 'var(--ink-950)' : 'var(--voltage-400)' }} />LIVE
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* User + logout */}
         <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 4 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%', background: 'var(--ink-600)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
-            }}>
-              {(currentUser?.name || currentUser?.email || 'SA').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-            </div>
+            <WpAvatar initials={(currentUser?.name || currentUser?.email || 'SA').split(' ').map(n => n[0]).join('').slice(0, 2)} size={28} tone="ink" />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {currentUser?.name || currentUser?.email || 'Super Admin'}
@@ -608,7 +615,7 @@ export default function SuperAdminDashboard() {
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#fff'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
           >
-            <span style={{ fontSize: 15 }}>↩</span>
+            <WpIcon name="settings" size={16} color="currentColor" />
             Sign out
           </button>
         </div>
@@ -622,21 +629,12 @@ export default function SuperAdminDashboard() {
           padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 16,
           position: 'sticky', top: 0, zIndex: 40,
         }}>
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.01em' }}>Waypoint Platform</span>
-            <span style={{ marginLeft: 10, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-400)', background: 'var(--asphalt-100)', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>SUPER ADMIN</span>
+          <div style={{ flex: 1, maxWidth: 360, display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', border: '1.5px solid var(--asphalt-200)', borderRadius: 'var(--radius-pill)', background: 'var(--asphalt-50)' }}>
+            <WpIcon name="search" size={16} color="var(--asphalt-400)" />
+            <input type="text" placeholder="Search organisations, admins…" style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, fontFamily: 'var(--font-sans)', color: 'var(--asphalt-800)' }} />
           </div>
-          <button onClick={logout} style={{
-            padding: '7px 18px', borderRadius: 999,
-            background: 'transparent', color: 'var(--asphalt-600)',
-            border: '1.5px solid var(--asphalt-200)',
-            fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-sans)', cursor: 'pointer',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--asphalt-100)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            Sign out
-          </button>
+          <div style={{ flex: 1 }} />
+          <WpAvatar initials={(currentUser?.name || 'SA').split(' ').map(n => n[0]).join('').slice(0, 2)} size={36} tone="ink" />
         </div>
 
         {/* Page content */}

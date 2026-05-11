@@ -111,7 +111,7 @@ export default function WebLogin() {
       if (result?.requiresRoleSelection) {
         setShowRoleModal(true);
       } else {
-        navigate(result.role === 'ADMIN' ? '/admin' : '/home', { replace: true });
+        navigate(result.role === 'SUPER_ADMIN' ? '/super-admin' : result.role === 'ADMIN' ? '/admin' : '/home', { replace: true });
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Invalid credentials');
