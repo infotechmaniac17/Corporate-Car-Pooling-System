@@ -1,5 +1,6 @@
 package com.carpooling.dto.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -11,4 +12,6 @@ public class GuardianContactRequest {
     private String phone;
     @NotBlank
     private String relation;
+    @Email
+    private String email;
 }

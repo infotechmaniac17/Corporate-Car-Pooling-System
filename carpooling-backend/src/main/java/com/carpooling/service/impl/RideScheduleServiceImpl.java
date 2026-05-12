@@ -5,10 +5,13 @@ import com.carpooling.common.exception.ResourceNotFoundException;
 import com.carpooling.dto.request.CancelScheduleRequest;
 import com.carpooling.dto.request.CreateRideScheduleRequest;
 import com.carpooling.dto.response.RideScheduleResponse;
+import com.carpooling.entity.RideEvent;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.Route;
 import com.carpooling.entity.User;
 import com.carpooling.entity.Vehicle;
+import com.carpooling.enums.RideEventType;
+import com.carpooling.repository.RideEventRepository;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -47,6 +50,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     private final RidePassengerRepository ridePassengerRepository;
     private final RideRequestRepository rideRequestRepository;
     private final UserActivityService userActivityService;
+    private final RideEventRepository rideEventRepository;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -93,7 +97,9 @@ public class RideScheduleServiceImpl implements RideScheduleService {
                 .status(ScheduleStatus.CREATED)
                 .build();
 
-        return toResponse(rideScheduleRepository.save(schedule));
+        RideSchedule saved = rideScheduleRepository.save(schedule);
+        logEvent(saved, RideEventType.SCHEDULE_CREATED, driverId, null);
+        return toResponse(saved);
     }
 
     @Override
@@ -117,6 +123,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
         validateTransition(schedule.getStatus(), newStatus);
         schedule.setStatus(newStatus);
         RideSchedule saved = rideScheduleRepository.save(schedule);
+        logEvent(saved, eventTypeForStatus(newStatus), driverId, null);
 
         if (newStatus == ScheduleStatus.COMPLETED) {
             ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)
@@ -153,6 +160,7 @@ public class RideScheduleServiceImpl implements RideScheduleService {
         }
         schedule.setCancelReason(reasonText);
         rideScheduleRepository.save(schedule);
+        logEvent(schedule, RideEventType.STATUS_CANCELLED, driverId, "{\"source\":\"driver\"}");
 
         ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)
                 .forEach(rp -> {
@@ -196,6 +204,25 @@ public class RideScheduleServiceImpl implements RideScheduleService {
         if (!valid) {
             throw new BusinessException("Invalid status transition: " + current + " -> " + next);
         }
+    }
+
+    private void logEvent(RideSchedule schedule, RideEventType type, Long actorId, String metadata) {
+        rideEventRepository.save(RideEvent.builder()
+                .rideSchedule(schedule)
+                .eventType(type)
+                .actor(actorId != null ? userRepository.getReferenceById(actorId) : null)
+                .metadata(metadata)
+                .build());
+    }
+
+    private RideEventType eventTypeForStatus(ScheduleStatus status) {
+        return switch (status) {
+            case ACTIVE    -> RideEventType.STATUS_ACTIVE;
+            case STARTED   -> RideEventType.STATUS_STARTED;
+            case COMPLETED -> RideEventType.STATUS_COMPLETED;
+            case CANCELLED -> RideEventType.STATUS_CANCELLED;
+            default        -> RideEventType.SCHEDULE_CREATED;
+        };
     }
 
     private RideScheduleResponse toResponse(RideSchedule s) {

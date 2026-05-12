@@ -40,15 +40,25 @@ public class PaymentController {
     @PostMapping("/confirm")
     public ResponseEntity<ApiResponse<Transaction>> confirm(
             @RequestParam String razorpayOrderId,
-            @RequestParam String razorpayPaymentId) {
+            @RequestParam String razorpayPaymentId,
+            @RequestParam String razorpaySignature) {
         return ResponseEntity.ok(ApiResponse.ok(
-                paymentService.confirmPayment(razorpayOrderId, razorpayPaymentId)));
+                paymentService.confirmPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature)));
     }
 
     @PostMapping("/{transactionId}/refund")
     public ResponseEntity<ApiResponse<Transaction>> refund(
             @PathVariable Long transactionId) {
         return ResponseEntity.ok(ApiResponse.ok(paymentService.refund(transactionId)));
+    }
+
+    /** Razorpay server-to-server webhook. Signature verified against the raw body. */
+    @PostMapping("/webhook")
+    public ResponseEntity<Void> webhook(
+            @RequestBody String payload,
+            @RequestHeader("X-Razorpay-Signature") String signature) {
+        paymentService.handleWebhook(payload, signature);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/my")

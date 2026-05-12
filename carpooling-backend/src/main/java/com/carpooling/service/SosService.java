@@ -7,4 +7,6 @@ import java.util.List;
 public interface SosService {
     SosIncident triggerSos(Long rideId, Long userId, double lat, double lng);
     List<SosIncident> getIncidentsByRide(Long rideId);
+    SosIncident resolveIncident(Long incidentId, Long resolvedByUserId);
+    List<SosIncident> getAllActiveIncidents();
 }

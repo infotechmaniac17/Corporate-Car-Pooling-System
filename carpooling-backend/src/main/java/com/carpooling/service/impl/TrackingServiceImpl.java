@@ -36,8 +36,8 @@ public class TrackingServiceImpl implements TrackingService {
         RideSchedule schedule = rideScheduleRepository.findById(request.getRideId())
                 .orElseThrow(() -> new ResourceNotFoundException("RideSchedule", request.getRideId()));
 
-        if (schedule.getStatus() != ScheduleStatus.ACTIVE) {
-            throw new BusinessException("Ride is not active");
+        if (schedule.getStatus() != ScheduleStatus.ACTIVE && schedule.getStatus() != ScheduleStatus.STARTED) {
+            throw new BusinessException("Ride is not active or started");
         }
 
         Point location = GF.createPoint(new Coordinate(request.getLng(), request.getLat()));

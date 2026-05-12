@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,21 @@ public class SosController {
     @GetMapping("/ride/{rideId}")
     public ResponseEntity<ApiResponse<List<SosIncident>>> getByRide(@PathVariable Long rideId) {
         return ResponseEntity.ok(ApiResponse.ok(sosService.getIncidentsByRide(rideId)));
+    }
+
+    @PatchMapping("/{incidentId}/resolve")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<SosIncident>> resolve(
+            @PathVariable Long incidentId,
+            HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(sosService.resolveIncident(incidentId, userId)));
+    }
+
+    @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<SosIncident>>> getActive() {
+        return ResponseEntity.ok(ApiResponse.ok(sosService.getAllActiveIncidents()));
     }
 
     private Long extractUserId(HttpServletRequest request) {

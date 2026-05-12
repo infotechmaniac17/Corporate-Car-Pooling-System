@@ -6,11 +6,12 @@ import WpButton from '../components/WpButton';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { getSchedule, cancelSchedule } from '../api/rides';
+import useDriverLocationStream from '../hooks/useDriverLocationStream';
+import { getSchedule, cancelSchedule, updateScheduleStatus } from '../api/rides';
 
 const STATUS_TONE = { CREATED: 'matched', ACTIVE: 'matched', STARTED: 'live', COMPLETED: 'completed', CANCELLED: 'cancelled' };
 
-function RideCard({ ride, onViewRequests, onCancel, cancelling }) {
+function RideCard({ ride, onViewRequests, onCancel, cancelling, onStartRide, onEndRide, statusChanging }) {
   const cancellable = ride.status === 'CREATED' || ride.status === 'ACTIVE';
   const scheduled = ride.departureTime ? new Date(ride.departureTime) : null;
   const timeStr = scheduled
@@ -34,7 +35,9 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling }) {
             {dateStr} · {timeStr}
           </div>
         </div>
-        <WpPill tone={STATUS_TONE[ride.status] || 'matched'}>{ride.status || 'CREATED'}</WpPill>
+        <WpPill tone={STATUS_TONE[ride.status] || 'matched'}>
+          {ride.status === 'STARTED' ? '● LIVE' : (ride.status || 'CREATED')}
+        </WpPill>
       </div>
 
       <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
@@ -54,11 +57,11 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling }) {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           onClick={() => onViewRequests(ride.id)}
           style={{
-            flex: 1, padding: '8px', borderRadius: 'var(--radius-md)',
+            flex: 1, minWidth: 100, padding: '8px', borderRadius: 'var(--radius-md)',
             border: '1.5px solid var(--asphalt-200)', background: '#fff',
             fontSize: 13, fontWeight: 600, color: 'var(--asphalt-700)',
             cursor: 'pointer', fontFamily: 'var(--font-sans)',
@@ -66,6 +69,36 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling }) {
         >
           View requests →
         </button>
+        {ride.status === 'ACTIVE' && (
+          <button
+            onClick={() => onStartRide(ride.id)}
+            disabled={statusChanging}
+            style={{
+              padding: '8px 14px', borderRadius: 'var(--radius-md)',
+              border: '1.5px solid var(--success-300)', background: 'var(--success-100)',
+              fontSize: 13, fontWeight: 600, color: 'var(--success-700)',
+              cursor: statusChanging ? 'wait' : 'pointer', fontFamily: 'var(--font-sans)',
+              opacity: statusChanging ? 0.5 : 1,
+            }}
+          >
+            {statusChanging ? 'Starting…' : 'Start ride'}
+          </button>
+        )}
+        {ride.status === 'STARTED' && (
+          <button
+            onClick={() => onEndRide(ride.id)}
+            disabled={statusChanging}
+            style={{
+              padding: '8px 14px', borderRadius: 'var(--radius-md)',
+              border: '1.5px solid var(--ink-300)', background: 'var(--ink-50)',
+              fontSize: 13, fontWeight: 600, color: 'var(--ink-700)',
+              cursor: statusChanging ? 'wait' : 'pointer', fontFamily: 'var(--font-sans)',
+              opacity: statusChanging ? 0.5 : 1,
+            }}
+          >
+            {statusChanging ? 'Ending…' : 'End ride'}
+          </button>
+        )}
         {cancellable && (
           <button
             onClick={() => onCancel(ride)}
@@ -94,6 +127,10 @@ export default function DriverMyRidesScreen() {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState(null);
+  const [statusChangingId, setStatusChangingId] = useState(null);
+
+  const startedRideId = rides.find(r => r.status === 'STARTED')?.id ?? null;
+  useDriverLocationStream(startedRideId);
 
   const load = () => {
     if (!currentUser?.id) return;
@@ -105,6 +142,30 @@ export default function DriverMyRidesScreen() {
   };
 
   useEffect(() => { load(); }, [currentUser?.id]);
+
+  const handleStartRide = async (rideId) => {
+    setStatusChangingId(rideId);
+    try {
+      await updateScheduleStatus(rideId, 'STARTED');
+      await load();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to start ride.');
+    } finally {
+      setStatusChangingId(null);
+    }
+  };
+
+  const handleEndRide = async (rideId) => {
+    setStatusChangingId(rideId);
+    try {
+      await updateScheduleStatus(rideId, 'COMPLETED');
+      await load();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to end ride.');
+    } finally {
+      setStatusChangingId(null);
+    }
+  };
 
   const handleCancel = async (ride) => {
     const note = window.prompt(
@@ -172,6 +233,9 @@ export default function DriverMyRidesScreen() {
                     onViewRequests={id => navigate(`/driver/inbox/${id}`)}
                     onCancel={handleCancel}
                     cancelling={cancellingId === r.id}
+                    onStartRide={handleStartRide}
+                    onEndRide={handleEndRide}
+                    statusChanging={statusChangingId === r.id}
                   />
                 ))}
               </div>
@@ -190,6 +254,9 @@ export default function DriverMyRidesScreen() {
                     onViewRequests={id => navigate(`/driver/inbox/${id}`)}
                     onCancel={handleCancel}
                     cancelling={cancellingId === r.id}
+                    onStartRide={handleStartRide}
+                    onEndRide={handleEndRide}
+                    statusChanging={statusChangingId === r.id}
                   />
                 ))}
               </div>

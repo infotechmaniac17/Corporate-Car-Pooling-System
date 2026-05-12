@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WpMap from '../components/WpMap';
 import WpPill from '../components/WpPill';
@@ -6,6 +6,7 @@ import WpAvatar from '../components/WpAvatar';
 import WpButton from '../components/WpButton';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
+import useTrackingSubscription from '../hooks/useTrackingSubscription';
 import { getLatest } from '../api/tracking';
 import { getPartners } from '../api/chat';
 
@@ -18,41 +19,41 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const [tracking, setTracking] = useState(null);
-  const [driverPos, setDriverPos] = useState(0.2);
+  const [driverPos, setDriverPos] = useState(null);
   const [partner, setPartner] = useState(null);
-  const intervalRef = useRef(null);
+  const [liveCoords, setLiveCoords] = useState(null);
 
   const resolvedRideId = rideId;
 
+  const handleLocation = useCallback(({ lat, lng }) => {
+    setLiveCoords({ lat, lng });
+  }, []);
+
+  useTrackingSubscription(resolvedRideId, handleLocation);
+
   useEffect(() => {
-    const fetchTracking = () => {
-      if (!resolvedRideId) return;
-      getLatest(resolvedRideId)
-        .then(res => {
-          setTracking(res.data);
-          if (res.data?.progressFraction != null) setDriverPos(res.data.progressFraction);
-        })
-        .catch(() => {});
-    };
+    if (!resolvedRideId) return;
 
-    fetchTracking();
-    intervalRef.current = setInterval(fetchTracking, 5000);
+    getLatest(resolvedRideId)
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        setTracking(data);
+        if (data?.progressFraction != null) setDriverPos(data.progressFraction);
+      })
+      .catch(() => {});
 
-    if (resolvedRideId) {
-      getPartners(resolvedRideId)
-        .then(res => {
-          const list = res.data?.data || res.data || [];
-          if (list.length > 0) setPartner(list[0]);
-        })
-        .catch(() => {});
-    }
-    return () => clearInterval(intervalRef.current);
+    getPartners(resolvedRideId)
+      .then(res => {
+        const list = res.data?.data || res.data || [];
+        if (list.length > 0) setPartner(list[0]);
+      })
+      .catch(() => {});
   }, [resolvedRideId]);
 
   const driverName = partner?.name || tracking?.driverName || 'Driver';
   const partnerPhone = partner?.phone || tracking?.driverPhone || '';
-  const vehicleInfo = tracking?.vehiclePlate || tracking?.vehicle || 'KA 01 AB 1234';
-  const etaMin = tracking?.etaMinutes ?? 8;
+  const vehicleInfo = tracking?.vehiclePlate || tracking?.vehicle || '—';
+  const etaMin = tracking?.etaMinutes ?? null;
 
   if (isDesktop) {
     return (
@@ -81,8 +82,8 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
           {/* ETA bar */}
           <div style={{ padding: '20px', background: 'var(--ink-950)', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div>
-              <div style={{ fontSize: '36px', fontWeight: 800, color: 'var(--voltage-400)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{etaMin}</div>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>MIN AWAY</div>
+              <div style={{ fontSize: '36px', fontWeight: 800, color: 'var(--voltage-400)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{etaMin ?? '—'}</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{etaMin != null ? 'MIN AWAY' : 'LIVE'}</div>
             </div>
             <div style={{ flex: 1, borderLeft: '1px solid rgba(255,255,255,0.12)', paddingLeft: '16px' }}>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', fontFamily: 'var(--font-sans)' }}>Arriving soon</div>
@@ -98,7 +99,7 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
               <div>
                 <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>{driverName}</div>
                 <div style={{ fontSize: '13px', color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                  {tracking?.driverRating ? `★ ${tracking.driverRating}` : '★ 4.8'} · Your driver
+                  {tracking?.driverRating ? `★ ${tracking.driverRating} · ` : ''}Your driver
                 </div>
               </div>
             </div>
@@ -174,7 +175,7 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0', padding: '20px 20px calc(env(safe-area-inset-bottom, 16px) + 16px)', zIndex: 10, boxShadow: '0 -8px 32px rgba(13,18,64,0.12)' }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--asphalt-200)', margin: '0 auto 16px' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <WpPill tone="live">En route · {etaMin} min</WpPill>
+          <WpPill tone="live">En route{etaMin != null ? ` · ${etaMin} min` : ''}</WpPill>
           <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--asphalt-400)' }}>{vehicleInfo}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -182,7 +183,7 @@ export default function TrackingScreen({ rideId, onSos, onChat, onBack }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>{driverName}</div>
             <div style={{ fontSize: '12px', color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
-              {tracking?.driverRating ? `★ ${tracking.driverRating}` : '★ 4.8'} · Your driver
+              {tracking?.driverRating ? `★ ${tracking.driverRating} · ` : ''}Your driver
             </div>
           </div>
         </div>

@@ -20,3 +20,9 @@ export const resetPassword = (token, newPassword) =>
 
 export const selectRole = (userId, role) =>
   api.post(`/auth/select-role?userId=${userId}&role=${role}`);
+
+export const refreshToken = (token) =>
+  api.post(`/auth/refresh?refreshToken=${encodeURIComponent(token)}`);
+
+export const logoutApi = (token) =>
+  api.post(`/auth/logout?refreshToken=${encodeURIComponent(token)}`);

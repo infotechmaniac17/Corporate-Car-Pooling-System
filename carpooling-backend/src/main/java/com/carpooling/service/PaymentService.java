@@ -8,7 +8,8 @@ import java.util.List;
 
 public interface PaymentService {
     Transaction initiatePayment(Long rideId, Long userId, BigDecimal amount, String paymentMethod);
-    Transaction confirmPayment(String razorpayOrderId, String razorpayPaymentId);
+    Transaction confirmPayment(String razorpayOrderId, String razorpayPaymentId, String razorpaySignature);
     Transaction refund(Long transactionId);
     List<TransactionResponse> getMyTransactions(Long userId);
+    void handleWebhook(String payload, String signature);
 }

@@ -27,6 +27,9 @@ import PendingApprovalScreen from './screens/PendingApprovalScreen';
 import DriverApplicationScreen from './screens/DriverApplicationScreen';
 import AddressSetupScreen from './screens/AddressSetupScreen';
 import PassengerTripsScreen from './screens/PassengerTripsScreen';
+import GuardianContactsScreen from './screens/GuardianContactsScreen';
+import RateRideScreen from './screens/RateRideScreen';
+import DriverBackupRidesScreen from './screens/DriverBackupRidesScreen';
 
 // ─── Mode-switch blocker modal ────────────────────────────────────────────────
 
@@ -205,6 +208,9 @@ export default function App() {
       <Route path="/pending-approval"          element={<U activityState={activityState}><PendingApprovalScreen /></U>} />
       <Route path="/become-driver"             element={<U activityState={activityState}><DriverApplicationScreen /></U>} />
       <Route path="/setup-address"             element={<U activityState={activityState}><AddressSetupScreen /></U>} />
+      <Route path="/guardians"                 element={<U activityState={activityState}><GuardianContactsScreen /></U>} />
+      <Route path="/rate/:rideId"              element={<U activityState={activityState}><RateRideScreen /></U>} />
+      <Route path="/driver/backup-rides"       element={<U driverOnly activityState={activityState}><DriverBackupRidesScreen /></U>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,5 +1,6 @@
 package com.carpooling.entity;
 
+import com.carpooling.enums.BackupStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -27,6 +28,14 @@ public class BackupRide {
     @Column(nullable = false)
     @Builder.Default
     private Short priority = 1;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private BackupStatus status = BackupStatus.PENDING;
+
+    @Column(name = "activated_at")
+    private OffsetDateTime activatedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
