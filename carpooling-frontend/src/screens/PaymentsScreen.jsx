@@ -1,23 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import WpAppBar from '../components/WpAppBar';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { getMyTransactions } from '../api/payments';
 
-const MOCK_PAYMENTS = [
-  { id: 'TXN001', route: 'Home → Office', driver: 'Priya Sharma', amount: '₹360', date: 'May 3, 2026', status: 'PAID',    method: 'UPI'    },
-  { id: 'TXN002', route: 'Office → Home', driver: 'Kiran Das',    amount: '₹315', date: 'May 2, 2026', status: 'PAID',    method: 'Card'   },
-  { id: 'TXN003', route: 'Home → Office', driver: 'Sneha Patel',  amount: '₹190', date: 'May 2, 2026', status: 'PENDING', method: 'UPI'    },
-  { id: 'TXN004', route: 'Home → Office', driver: 'Vijay Kumar',  amount: '₹560', date: 'May 1, 2026', status: 'PAID',    method: 'Wallet' },
-  { id: 'TXN005', route: 'Office → Home', driver: 'Arjun Mehta',  amount: '₹360', date: 'Apr 30, 2026', status: 'REFUNDED', method: 'UPI'  },
-  { id: 'TXN006', route: 'Home → Office', driver: 'Priya Sharma', amount: '₹95',  date: 'Apr 29, 2026', status: 'PAID',    method: 'UPI'  },
-];
+const TONE = { SUCCESS: 'completed', INITIATED: 'warn', FAILED: 'cancelled', REFUNDED: 'cancelled' };
+const LABEL = { SUCCESS: 'PAID', INITIATED: 'PENDING', FAILED: 'FAILED', REFUNDED: 'REFUNDED' };
 
-const TONE = { PAID: 'completed', PENDING: 'warn', REFUNDED: 'cancelled' };
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function routeLabel(txn) {
+  if (txn.pickupLabel || txn.dropoffLabel) {
+    return `${txn.pickupLabel || '?'} → ${txn.dropoffLabel || '?'}`;
+  }
+  return `Ride #${txn.rideId}`;
+}
 
 function TxnCard({ txn }) {
+  const status = txn.status || 'INITIATED';
+  const displayStatus = LABEL[status] || status;
+  const tone = TONE[status] || 'warn';
+
   return (
     <div style={{
       background: '#fff', borderRadius: 'var(--radius-lg)', padding: '14px 16px',
@@ -26,28 +35,30 @@ function TxnCard({ txn }) {
     }}>
       <div style={{
         width: 40, height: 40, borderRadius: 'var(--radius-md)', flexShrink: 0,
-        background: txn.status === 'PAID' ? 'var(--success-100)' : txn.status === 'REFUNDED' ? 'var(--asphalt-100)' : 'var(--warning-100)',
+        background: status === 'SUCCESS' ? 'var(--success-100)' : status === 'REFUNDED' ? 'var(--asphalt-100)' : 'var(--warning-100)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <WpIcon
-          name={txn.status === 'PAID' ? 'check' : txn.status === 'REFUNDED' ? 'arrow-right' : 'clock'}
+          name={status === 'SUCCESS' ? 'check' : status === 'REFUNDED' ? 'arrow-right' : 'clock'}
           size={18}
-          color={txn.status === 'PAID' ? 'var(--success-700)' : txn.status === 'REFUNDED' ? 'var(--asphalt-500)' : 'var(--warning-700)'}
+          color={status === 'SUCCESS' ? 'var(--success-700)' : status === 'REFUNDED' ? 'var(--asphalt-500)' : 'var(--warning-700)'}
         />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--asphalt-900)', marginBottom: 2 }}>
-          {txn.route}
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--asphalt-900)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {routeLabel(txn)}
         </div>
         <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
-          {txn.driver} · {txn.method} · {txn.date}
+          {txn.driverName ? `${txn.driverName} · ` : ''}
+          {txn.paymentMethod ? `${txn.paymentMethod} · ` : ''}
+          {formatDate(txn.departureTime || txn.createdAt)}
         </div>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)', marginBottom: 4 }}>
-          {txn.amount}
+          ₹{txn.amount != null ? Number(txn.amount).toLocaleString('en-IN') : '—'}
         </div>
-        <WpPill tone={TONE[txn.status]}>{txn.status}</WpPill>
+        <WpPill tone={tone}>{displayStatus}</WpPill>
       </div>
     </div>
   );
@@ -57,18 +68,41 @@ export default function PaymentsScreen() {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const [filter, setFilter] = useState('ALL');
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filters = ['ALL', 'PAID', 'PENDING', 'REFUNDED'];
-  const shown = filter === 'ALL' ? MOCK_PAYMENTS : MOCK_PAYMENTS.filter(t => t.status === filter);
-  const totalPaid = MOCK_PAYMENTS.filter(t => t.status === 'PAID').reduce((s, t) => s + parseInt(t.amount.replace(/[₹,]/g, '')), 0);
-  const pending = MOCK_PAYMENTS.filter(t => t.status === 'PENDING').length;
+  useEffect(() => {
+    setLoading(true);
+    getMyTransactions()
+      .then(res => {
+        const data = res.data?.data ?? res.data ?? [];
+        setTransactions(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        setError('Could not load transactions.');
+        setTransactions([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  const byMethod = MOCK_PAYMENTS.filter(t => t.status === 'PAID').reduce((acc, t) => {
-    const amount = parseInt(t.amount.replace(/[₹,]/g, ''));
-    acc[t.method] = (acc[t.method] || 0) + amount;
+  const filters = ['ALL', 'SUCCESS', 'INITIATED', 'REFUNDED'];
+  const shown = filter === 'ALL' ? transactions : transactions.filter(t => t.status === filter);
+
+  const paid = transactions.filter(t => t.status === 'SUCCESS');
+  const totalPaid = paid.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const pending = transactions.filter(t => t.status === 'INITIATED').length;
+
+  const byMethod = paid.reduce((acc, t) => {
+    const method = t.paymentMethod || 'Other';
+    acc[method] = (acc[method] || 0) + (Number(t.amount) || 0);
     return acc;
   }, {});
-  const driverRides = MOCK_PAYMENTS.reduce((acc, t) => { acc[t.driver] = (acc[t.driver] || 0) + 1; return acc; }, {});
+
+  const driverRides = transactions.reduce((acc, t) => {
+    if (t.driverName) acc[t.driverName] = (acc[t.driverName] || 0) + 1;
+    return acc;
+  }, {});
   const topDriver = Object.entries(driverRides).sort((a, b) => b[1] - a[1])[0];
 
   const FilterBar = () => (
@@ -79,7 +113,7 @@ export default function PaymentsScreen() {
           fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono)',
           background: filter === f ? 'var(--ink-950)' : 'var(--asphalt-100)',
           color: filter === f ? '#fff' : 'var(--asphalt-600)',
-        }}>{f}</button>
+        }}>{f === 'SUCCESS' ? 'PAID' : f}</button>
       ))}
     </div>
   );
@@ -89,7 +123,7 @@ export default function PaymentsScreen() {
       {[
         { label: 'Total spent', value: `₹${totalPaid.toLocaleString('en-IN')}`, icon: 'wallet', bg: 'var(--success-100)', color: 'var(--success-700)' },
         { label: 'Pending', value: pending, icon: 'clock', bg: 'var(--warning-100)', color: 'var(--warning-700)' },
-        { label: 'Rides paid', value: MOCK_PAYMENTS.filter(t => t.status === 'PAID').length, icon: 'car', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
+        { label: 'Rides paid', value: paid.length, icon: 'car', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
       ].map(s => (
         <div key={s.label} style={{ background: '#fff', borderRadius: 'var(--radius-lg)', padding: '14px 16px', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -103,6 +137,35 @@ export default function PaymentsScreen() {
       ))}
     </div>
   );
+
+  const TxnList = () => {
+    if (loading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} style={{ height: 76, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(90deg, var(--asphalt-100) 25%, var(--asphalt-50) 50%, var(--asphalt-100) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+          ))}
+        </div>
+      );
+    }
+    if (error) {
+      return <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--danger-600)', fontSize: 14 }}>{error}</div>;
+    }
+    if (shown.length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px 20px', border: '1.5px dashed var(--asphalt-200)', borderRadius: 'var(--radius-lg)', background: '#fff' }}>
+          <WpIcon name="wallet" size={36} color="var(--asphalt-300)" />
+          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--asphalt-600)', marginTop: 12 }}>No transactions yet</p>
+          <p style={{ fontSize: 13, color: 'var(--asphalt-400)', marginTop: 4 }}>Paid rides will appear here</p>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {shown.map(t => <TxnCard key={t.id} txn={t} />)}
+      </div>
+    );
+  };
 
   if (isDesktop) {
     return (
@@ -120,25 +183,25 @@ export default function PaymentsScreen() {
               <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)' }}>Transaction history</h2>
               <FilterBar />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {shown.map(t => <TxnCard key={t.id} txn={t} />)}
-            </div>
+            <TxnList />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>By payment method</div>
-              {Object.entries(byMethod).map(([method, amount]) => (
-                <div key={method} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: 'var(--ink-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <WpIcon name="wallet" size={14} color="var(--ink-600)" />
+            {Object.keys(byMethod).length > 0 && (
+              <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>By payment method</div>
+                {Object.entries(byMethod).map(([method, amount]) => (
+                  <div key={method} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: 'var(--ink-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <WpIcon name="wallet" size={14} color="var(--ink-600)" />
+                      </div>
+                      <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{method}</span>
                     </div>
-                    <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{method}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>₹{amount.toLocaleString('en-IN')}</span>
                   </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>₹{amount.toLocaleString('en-IN')}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
             {topDriver && (
               <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 14 }}>Most frequent driver</div>
@@ -167,12 +230,7 @@ export default function PaymentsScreen() {
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <SummaryRow />
         <FilterBar />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {shown.length === 0
-            ? <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--asphalt-400)', fontSize: 14 }}>No transactions</div>
-            : shown.map(t => <TxnCard key={t.id} txn={t} />)
-          }
-        </div>
+        <TxnList />
       </div>
     </div>
   );

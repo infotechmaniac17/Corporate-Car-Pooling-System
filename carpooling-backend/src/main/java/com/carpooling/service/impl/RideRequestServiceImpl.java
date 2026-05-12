@@ -4,10 +4,13 @@ import com.carpooling.common.exception.BusinessException;
 import com.carpooling.common.exception.ResourceNotFoundException;
 import com.carpooling.dto.request.RideRequestDto;
 import com.carpooling.dto.response.RideRequestResponse;
+import com.carpooling.entity.RideEvent;
 import com.carpooling.entity.RideRequest;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.User;
 import com.carpooling.enums.RequestStatus;
+import com.carpooling.enums.RideEventType;
+import com.carpooling.repository.RideEventRepository;
 import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.entity.RidePassenger;
 import com.carpooling.enums.PassengerStatus;
@@ -37,6 +40,7 @@ public class RideRequestServiceImpl implements RideRequestService {
     private final UserRepository userRepository;
     private final RidePassengerRepository ridePassengerRepository;
     private final UserActivityService userActivityService;
+    private final RideEventRepository rideEventRepository;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -105,7 +109,14 @@ public class RideRequestServiceImpl implements RideRequestService {
                     .build());
         }
 
-        return toResponse(rideRequestRepository.save(request));
+        RideRequestResponse resp = toResponse(rideRequestRepository.save(request));
+        if (newStatus == RequestStatus.ACCEPTED || newStatus == RequestStatus.REJECTED) {
+            RideEventType evtType = newStatus == RequestStatus.ACCEPTED
+                    ? RideEventType.REQUEST_ACCEPTED : RideEventType.REQUEST_REJECTED;
+            logEvent(request.getRideSchedule(), evtType, driverId,
+                    "{\"requestId\":" + requestId + "}");
+        }
+        return resp;
     }
 
     @Override
@@ -158,6 +169,15 @@ public class RideRequestServiceImpl implements RideRequestService {
     public List<RideRequestResponse> getRequestsForDriver(Long driverId) {
         return rideRequestRepository.findAllByDriverId(driverId)
                 .stream().map(this::toResponse).toList();
+    }
+
+    private void logEvent(RideSchedule schedule, RideEventType type, Long actorId, String metadata) {
+        rideEventRepository.save(RideEvent.builder()
+                .rideSchedule(schedule)
+                .eventType(type)
+                .actor(actorId != null ? userRepository.getReferenceById(actorId) : null)
+                .metadata(metadata)
+                .build());
     }
 
     private RideRequestResponse toResponse(RideRequest r) {

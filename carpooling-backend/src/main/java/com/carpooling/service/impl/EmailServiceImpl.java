@@ -141,6 +141,44 @@ public class EmailServiceImpl implements EmailService {
             """.formatted(resetLink, resetLink, resetLink);
     }
 
+    @Override
+    public void sendSosAlert(String guardianEmail, String guardianName, String triggeredByName,
+                              double lat, double lng, Long rideId) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setTo(guardianEmail);
+            helper.setSubject("SOS Alert — Waypoint Ride #" + rideId);
+            helper.setText(buildSosAlertBody(guardianName, triggeredByName, lat, lng, rideId), true);
+            mailSender.send(message);
+            log.info("SOS alert email sent to {} for ride {}", guardianEmail, rideId);
+        } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
+            log.error("Failed to send SOS alert email to {}: {}", guardianEmail, ex.getMessage());
+        }
+    }
+
+    private String buildSosAlertBody(String guardianName, String triggeredByName,
+                                      double lat, double lng, Long rideId) {
+        String mapsLink = "https://www.google.com/maps?q=" + lat + "," + lng;
+        return """
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#222">
+              <h2 style="margin:0 0 12px;color:#c0392b">⚠ SOS Alert</h2>
+              <p>Hi %s,</p>
+              <p><strong>%s</strong> has triggered an SOS emergency on Ride <strong>#%d</strong>.</p>
+              <p>Their last known location:</p>
+              <p style="margin:16px 0">
+                <a href="%s" style="display:inline-block;padding:12px 24px;background:#c0392b;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">
+                  View on Google Maps
+                </a>
+              </p>
+              <p style="font-size:13px;color:#555">Coordinates: %s, %s</p>
+              <p style="font-size:12px;color:#888;margin-top:16px">This is an automated alert from the Waypoint carpool safety system.</p>
+            </div>
+            """.formatted(guardianName, triggeredByName, rideId, mapsLink,
+                String.valueOf(lat), String.valueOf(lng));
+    }
+
     private String buildBody(String otp, int expiryMinutes) {
         return """
             <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#222">

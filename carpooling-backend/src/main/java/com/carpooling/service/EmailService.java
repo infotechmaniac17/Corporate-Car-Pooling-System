@@ -8,4 +8,5 @@ public interface EmailService {
     void sendDriverApproval(User user, User admin, RoleRequest request);
     void sendDriverRejection(User user, User admin, RoleRequest request, String reason);
     void sendPasswordResetEmail(String to, String resetLink);
+    void sendSosAlert(String guardianEmail, String guardianName, String triggeredByName, double lat, double lng, Long rideId);
 }

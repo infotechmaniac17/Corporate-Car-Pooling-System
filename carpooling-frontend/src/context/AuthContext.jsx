@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import * as authApi from '../api/auth';
+import { logoutApi } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -36,7 +37,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password);
-    const { token: jwt, userId, email: userEmail, role, requiresRoleSelection, driverStatus, passengerStatus } = res.data.data;
+    const { token: jwt, refreshToken: refreshTok, userId, email: userEmail, role, requiresRoleSelection, driverStatus, passengerStatus } = res.data.data;
 
     if (requiresRoleSelection) {
       setPendingRoleSelection({ userId, email: userEmail });
@@ -46,6 +47,7 @@ export function AuthProvider({ children }) {
     const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
     const mode = defaultModeForRole(role);
     localStorage.setItem('wp_token', jwt);
+    if (refreshTok) localStorage.setItem('wp_refresh_token', refreshTok);
     localStorage.setItem('wp_user', JSON.stringify(user));
     localStorage.setItem('wp_active_mode', mode);
     setToken(jwt);
@@ -57,10 +59,11 @@ export function AuthProvider({ children }) {
   const confirmRole = useCallback(async (selectedRole) => {
     if (!pendingRoleSelection) return;
     const res = await authApi.selectRole(pendingRoleSelection.userId, selectedRole);
-    const { token: jwt, userId, email: userEmail, role, driverStatus, passengerStatus } = res.data.data;
+    const { token: jwt, refreshToken: refreshTok, userId, email: userEmail, role, driverStatus, passengerStatus } = res.data.data;
     const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
     const mode = defaultModeForRole(role);
     localStorage.setItem('wp_token', jwt);
+    if (refreshTok) localStorage.setItem('wp_refresh_token', refreshTok);
     localStorage.setItem('wp_user', JSON.stringify(user));
     localStorage.setItem('wp_active_mode', mode);
     setToken(jwt);
@@ -72,10 +75,11 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (data) => {
     const res = await authApi.register(data);
-    const { token: jwt, userId, email: userEmail, role, driverStatus, passengerStatus } = res.data.data;
+    const { token: jwt, refreshToken: refreshTok, userId, email: userEmail, role, driverStatus, passengerStatus } = res.data.data;
     const user = { id: userId, email: userEmail, role, driverStatus, passengerStatus };
     const mode = defaultModeForRole(role);
     localStorage.setItem('wp_token', jwt);
+    if (refreshTok) localStorage.setItem('wp_refresh_token', refreshTok);
     localStorage.setItem('wp_user', JSON.stringify(user));
     localStorage.setItem('wp_active_mode', mode);
     setToken(jwt);
@@ -93,8 +97,13 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const rt = localStorage.getItem('wp_refresh_token');
+    if (rt) {
+      try { await logoutApi(rt); } catch {}
+    }
     localStorage.removeItem('wp_token');
+    localStorage.removeItem('wp_refresh_token');
     localStorage.removeItem('wp_user');
     localStorage.removeItem('wp_active_mode');
     setToken(null);

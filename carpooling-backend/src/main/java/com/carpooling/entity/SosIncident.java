@@ -1,5 +1,6 @@
 package com.carpooling.entity;
 
+import com.carpooling.enums.SosStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,4 +31,16 @@ public class SosIncident {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private SosStatus status = SosStatus.ACTIVE;
+
+    @Column(name = "resolved_at")
+    private OffsetDateTime resolvedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resolved_by")
+    private User resolvedBy;
 }

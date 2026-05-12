@@ -5,10 +5,6 @@ import useIsDesktop from '../hooks/useIsDesktop';
 import { trigger as triggerSos } from '../api/sos';
 import { getGuardians } from '../api/users';
 
-const mockGuardians = [
-  { id: '1', name: 'Emergency Services', phone: '112' },
-  { id: '2', name: 'Company Safety Desk', phone: '+91-1800-XXX-XXXX' },
-];
 
 export default function SosScreen({ rideId, onCancel }) {
   const navigate = useNavigate();
@@ -24,7 +20,7 @@ export default function SosScreen({ rideId, onCancel }) {
     if (resolvedRideId) triggerSos(resolvedRideId).catch(() => {});
     getGuardians()
       .then(res => setGuardians(res.data?.length ? res.data : mockGuardians))
-      .catch(() => setGuardians(mockGuardians));
+      .catch(() => setGuardians([]));
   }, [resolvedRideId]);
 
   const handleHoldStart = () => {
@@ -60,7 +56,11 @@ export default function SosScreen({ rideId, onCancel }) {
         Notified contacts
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {guardians.map(g => (
+        {guardians.length === 0 ? (
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', textAlign: 'center', padding: '8px 0' }}>
+            No guardian contacts set up.<br />Add contacts in your profile.
+          </div>
+        ) : guardians.map(g => (
           <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <WpIcon name="user" size={18} color="rgba(255,255,255,0.8)" />

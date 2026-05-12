@@ -24,4 +24,7 @@ public class GuardianContact {
 
     @Column(nullable = false)
     private String relation;
+
+    @Column
+    private String email;
 }

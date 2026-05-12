@@ -37,6 +37,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 var userDetails = userDetailsService.loadUserByUsername(email);
                 if (jwtUtil.isTokenValid(token, userDetails)) {
+                    if (userDetails instanceof com.carpooling.entity.User u
+                            && Boolean.TRUE.equals(u.getIsSuspended())) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Account suspended\"}");
+                        return;
+                    }
                     var auth = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

@@ -1,0 +1,14 @@
+package com.carpooling.enums;
+
+public enum RideEventType {
+    SCHEDULE_CREATED,
+    STATUS_ACTIVE,
+    STATUS_STARTED,
+    STATUS_COMPLETED,
+    STATUS_CANCELLED,
+    REQUEST_ACCEPTED,
+    REQUEST_REJECTED,
+    REQUEST_CANCELLED,
+    BACKUP_ACTIVATED,
+    SOS_TRIGGERED
+}
