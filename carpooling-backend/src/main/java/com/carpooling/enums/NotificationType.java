@@ -1,0 +1,12 @@
+package com.carpooling.enums;
+
+public enum NotificationType {
+    REQUEST_RECEIVED,
+    REQUEST_ACCEPTED,
+    REQUEST_REJECTED,
+    BACKUP_ACTIVATED,
+    RIDE_CANCELLED,
+    SOS_TRIGGERED,
+    PAYMENT_SUCCESS,
+    PAYMENT_REFUNDED
+}

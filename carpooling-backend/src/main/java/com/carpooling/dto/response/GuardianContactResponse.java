@@ -10,4 +10,5 @@ public class GuardianContactResponse {
     private String name;
     private String phone;
     private String relation;
+    private String email;
 }

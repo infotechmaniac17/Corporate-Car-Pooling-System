@@ -29,6 +29,8 @@ public interface RideRequestRepository extends JpaRepository<RideRequest, Long> 
     @Query("SELECT COUNT(r) FROM RideRequest r WHERE r.rideSchedule.id = :rideId AND r.status = 'ACCEPTED'")
     long countAcceptedByRideId(@Param("rideId") Long rideId);
 
+    List<RideRequest> findByStatusAndCreatedAtBefore(RequestStatus status, java.time.OffsetDateTime before);
+
     @Query(value = """
         SELECT rr.* FROM ride_requests rr
         WHERE rr.ride_id = :rideId

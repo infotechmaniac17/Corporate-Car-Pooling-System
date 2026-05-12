@@ -26,6 +26,9 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
     long countByDriverId(Long driverId);
     long countByDriverIdAndStatus(Long driverId, ScheduleStatus status);
 
+    List<RideSchedule> findByStatusInAndDepartureTimeBefore(
+            java.util.Collection<ScheduleStatus> statuses, OffsetDateTime before);
+
     @Query("""
         SELECT rs FROM RideSchedule rs
         WHERE rs.status = 'CREATED'

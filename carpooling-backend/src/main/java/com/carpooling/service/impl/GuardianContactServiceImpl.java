@@ -34,6 +34,7 @@ public class GuardianContactServiceImpl implements GuardianContactService {
                 .name(request.getName())
                 .phone(request.getPhone())
                 .relation(request.getRelation())
+                .email(request.getEmail())
                 .build());
 
         return toResponse(contact);
@@ -63,6 +64,7 @@ public class GuardianContactServiceImpl implements GuardianContactService {
                 .name(c.getName())
                 .phone(c.getPhone())
                 .relation(c.getRelation())
+                .email(c.getEmail())
                 .build();
     }
 }

@@ -439,6 +439,22 @@ export default function ProfileScreen({ activityState }) {
       {/* Role access */}
       {!isDesktop && <RoleAccessSection />}
 
+      {/* Emergency contacts */}
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--asphalt-100)' }}>
+        <SectionLabel>Safety</SectionLabel>
+        <button
+          onClick={() => navigate('/guardians')}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '13px 16px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--asphalt-200)',
+            background: '#fff', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--asphalt-800)' }}>Emergency contacts</span>
+          <WpIcon name="chevron-right" size={16} color="var(--asphalt-400)" />
+        </button>
+      </div>
+
       {/* Sign out */}
       <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--asphalt-100)' }}>
         <button

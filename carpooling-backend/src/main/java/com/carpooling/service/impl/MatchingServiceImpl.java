@@ -67,10 +67,11 @@ public class MatchingServiceImpl implements MatchingService {
                 continue;
             }
 
-            // Proximity: pickup within search radius
-            double distToPickup = haversineMeters(
+            // Corridor proximity: passenger pickup within search radius of driver's route line
+            double distToPickup = distanceToSegmentMeters(
                     request.getPickupLat(), request.getPickupLng(),
-                    driverPickupLat, driverPickupLng);
+                    driverPickupLat, driverPickupLng,
+                    driverDropLat, driverDropLng);
 
             if (distToPickup > request.getSearchRadiusMeters()) continue;
 
@@ -107,6 +108,35 @@ public class MatchingServiceImpl implements MatchingService {
                         Comparator.reverseOrder()));
 
         return results;
+    }
+
+    /**
+     * Minimum distance from point P to the great-circle segment A→B.
+     * Uses equirectangular projection (accurate enough for typical city-scale detours).
+     */
+    private double distanceToSegmentMeters(double pLat, double pLng,
+                                           double aLat, double aLng,
+                                           double bLat, double bLng) {
+        double ax = Math.toRadians(aLng) * Math.cos(Math.toRadians((aLat + bLat) / 2));
+        double ay = Math.toRadians(aLat);
+        double bx = Math.toRadians(bLng) * Math.cos(Math.toRadians((aLat + bLat) / 2));
+        double by = Math.toRadians(bLat);
+        double px = Math.toRadians(pLng) * Math.cos(Math.toRadians((aLat + bLat) / 2));
+        double py = Math.toRadians(pLat);
+
+        double dx = bx - ax;
+        double dy = by - ay;
+        double lenSq = dx * dx + dy * dy;
+
+        double t = lenSq == 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+
+        double closestX = ax + t * dx;
+        double closestY = ay + t * dy;
+
+        double closestLat = Math.toDegrees(closestY);
+        double closestLng = Math.toDegrees(closestX / Math.cos(Math.toRadians((aLat + bLat) / 2)));
+
+        return haversineMeters(pLat, pLng, closestLat, closestLng);
     }
 
     private double haversineMeters(double lat1, double lng1, double lat2, double lng2) {

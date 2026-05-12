@@ -50,33 +50,44 @@ Date: 2026-05-12. Snapshot of what is missing / stubbed vs the architecture in `
 
 ## Phase 2 — Core feature completeness
 
-### 2.1 Notification system (currently absent)
-- No in-app notifications, no push (FCM), no SMS. Nothing notifies a passenger that a request was accepted/rejected, a driver of a new request (inbox is manual refresh), a backup driver of activation, payment success/refund, ride cancelled, SOS.
-- **Fix:** `notifications` table + entity + `NotificationService`; WebSocket topic `/topic/user/{id}/notifications`; optional FCM/SMS adapters. This unblocks 1.3, 2.2, 2.3.
+### 2.1 Notification system ✅ DONE
+- `Notification` entity + `NotificationRepository` created. `migration_v12.sql` adds `notifications` table.
+- `NotificationType` enum: REQUEST_RECEIVED, REQUEST_ACCEPTED, REQUEST_REJECTED, BACKUP_ACTIVATED, RIDE_CANCELLED, SOS_TRIGGERED, PAYMENT_SUCCESS, PAYMENT_REFUNDED.
+- `NotificationService/Impl`: `send()` persists + pushes via `SimpMessagingTemplate` to `/topic/user/{id}/notifications`. WS push failures are swallowed (non-fatal).
+- `NotificationController`: GET /notifications/my, GET /notifications/unread-count, PATCH /notifications/{id}/read, PATCH /notifications/read-all.
+- `RideRequestServiceImpl`: notifies driver on REQUEST_RECEIVED; notifies passenger on REQUEST_ACCEPTED / REQUEST_REJECTED.
+- `BackupDriverServiceImpl`: notifies driver on backup assignment and on promotion to primary.
+- Frontend: `api/notifications.js`; `AppShell` sidebar shows bell with unread badge + dropdown panel polling every 30s.
 
-### 2.2 Backup driver system incomplete
-- `BackupRide` has no status field. Architecture states `PENDING → ACTIVATED → USED → EXPIRED`; current code just deletes the row on activation.
-- Activation is **manual only** (`activateNextBackupDriver`). No detection of "driver unresponsive" / no-show timeout.
-- No notification to the promoted backup driver. No driver-side UI to view/accept backup assignments.
-- **Fix:** add status enum + transitions, a scheduled job for unresponsive-driver detection, notifications, driver UI.
+### 2.2 Backup driver system ✅ DONE
+- `BackupStatus` enum: PENDING, ACTIVATED, USED, EXPIRED.
+- `BackupRide` entity: added `status` + `activatedAt` fields. `migration_v12.sql` adds columns.
+- `BackupRideRepository`: added `findTopByRideScheduleIdAndStatusOrderByPriorityAsc`, `findByBackupDriverId`, `expirePendingBeforeDeparture`.
+- `BackupDriverServiceImpl`: `activateNextBackupDriver` now transitions PENDING→ACTIVATED (no delete); sends BACKUP_ACTIVATED notification. `assignBackupDriver` notifies driver of new backup assignment.
+- `DriverBackupController` at `/driver/backup-rides`: GET returns all backup assignments for authenticated driver.
+- Frontend: `DriverBackupRidesScreen.jsx` — lists PENDING/ACTIVATED/EXPIRED backup rides; route `/driver/backup-rides`; added to driver sidebar nav.
 
-### 2.3 Ratings — backend exists, no rider/driver UI
-- `RatingController` + `api/ratings.js` exist and admin dashboard uses them, but there is **no post-ride rating screen** for passengers/drivers and no route for it. Architecture wants both parties to rate each other after completion.
-- **Fix:** rating screen triggered on ride COMPLETED; show aggregate rating on profiles / matching cards.
+### 2.3 Ratings ✅ DONE
+- `RateRideScreen.jsx`: star picker (1–5), optional comment, submits to POST /ratings. Shows "Skip" button. Success state with confirmation.
+- Route `/rate/:rideId?driverId=X` added in App.jsx. `PassengerTripsScreen` already navigates to this route on "Rate driver" button click.
 
-### 2.4 Guardian contacts — backend exists, no UI
-- `GuardianContactController` exists; no management screen. Users can't add/edit guardian contacts, so SOS has no recipients.
-- **Fix:** guardian contacts CRUD screen under Profile.
+### 2.4 Guardian contacts ✅ DONE
+- `GuardianContactRequest`: added optional `email` field (`@Email`).
+- `GuardianContactResponse`: added `email` field.
+- `GuardianContactServiceImpl`: maps email in create and toResponse.
+- Frontend: `api/guardians.js` + `GuardianContactsScreen.jsx` — list/add/delete contacts with name/phone/email/relation. Route `/guardians`. Link added in ProfileScreen under "Safety" section.
 
-### 2.5 Matching engine depth
-- `MatchingServiceImpl` does Haversine pre-filter + detour % against driver `LineString` **endpoints only** — not true route-corridor overlap (`ST_DWithin` on the line, or buffer intersection).
-- Timing/departure-window matching and gender-preference filtering should be verified against the architecture's sort criteria (distance, rating, timing).
-- No `matching_logs` (architecture: optional) — useful for debugging match quality.
-- **Fix:** corridor-based overlap, explicit time-window filter, optional matching_logs.
+### 2.5 Matching engine depth ✅ DONE
+- `MatchingServiceImpl`: replaced endpoint-only Haversine check with `distanceToSegmentMeters()` — equirectangular projection finds closest point on driver's A→B segment, then measures Haversine to that point. Passenger pickup must be within `searchRadiusMeters` of the route corridor (not just the pickup endpoint).
+- Time-window filter (±1h) already existed. Gender preference filter already existed.
+- `matching_logs` left as optional (Phase 3 if needed).
 
-### 2.6 Scheduled jobs (none exist)
-- Nothing expires stale `ride_requests`, auto-completes past-departure rides, expires backup offers, or cleans old location pings.
-- **Fix:** `@Scheduled` tasks for each.
+### 2.6 Scheduled jobs ✅ DONE
+- `@EnableScheduling` added to `CarpoolingApplication`.
+- `RideSchedulerService`: three `@Scheduled` tasks:
+  1. `expireStaleRequests` — every 1h, cancels PENDING requests older than 24h.
+  2. `autoCompleteExpiredRides` — every 30min, completes STARTED/ACTIVE rides 2h past departure.
+  3. `expirePendingBackups` — every 30min, expires PENDING backup assignments past ride departure.
 
 ---
 

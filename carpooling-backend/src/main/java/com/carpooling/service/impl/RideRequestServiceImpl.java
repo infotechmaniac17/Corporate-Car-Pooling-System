@@ -18,8 +18,10 @@ import com.carpooling.repository.RidePassengerRepository;
 import com.carpooling.repository.RideRequestRepository;
 import com.carpooling.repository.RideScheduleRepository;
 import com.carpooling.repository.UserRepository;
+import com.carpooling.service.NotificationService;
 import com.carpooling.service.RideRequestService;
 import com.carpooling.service.UserActivityService;
+import com.carpooling.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -41,6 +43,7 @@ public class RideRequestServiceImpl implements RideRequestService {
     private final RidePassengerRepository ridePassengerRepository;
     private final UserActivityService userActivityService;
     private final RideEventRepository rideEventRepository;
+    private final NotificationService notificationService;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -75,6 +78,13 @@ public class RideRequestServiceImpl implements RideRequestService {
                 .dropLocation(drop)
                 .status(RequestStatus.PENDING)
                 .build());
+
+        notificationService.send(
+                schedule.getDriver().getId(),
+                "New ride request",
+                passenger.getName() + " requested a seat on your ride",
+                NotificationType.REQUEST_RECEIVED,
+                schedule.getId());
 
         return toResponse(saved);
     }
@@ -115,6 +125,18 @@ public class RideRequestServiceImpl implements RideRequestService {
                     ? RideEventType.REQUEST_ACCEPTED : RideEventType.REQUEST_REJECTED;
             logEvent(request.getRideSchedule(), evtType, driverId,
                     "{\"requestId\":" + requestId + "}");
+
+            Long passengerId = request.getPassenger().getId();
+            Long rideId = request.getRideSchedule().getId();
+            if (newStatus == RequestStatus.ACCEPTED) {
+                notificationService.send(passengerId, "Ride request accepted",
+                        "Your ride request was accepted. Check your trips.",
+                        NotificationType.REQUEST_ACCEPTED, rideId);
+            } else {
+                notificationService.send(passengerId, "Ride request rejected",
+                        "Your ride request was not accepted by the driver.",
+                        NotificationType.REQUEST_REJECTED, rideId);
+            }
         }
         return resp;
     }
