@@ -5,9 +5,11 @@ import WpAppBar from '../components/WpAppBar';
 import WpButton from '../components/WpButton';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
+import RouteDisplay from '../components/RouteDisplay';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useDriverLocationStream from '../hooks/useDriverLocationStream';
-import { getSchedule, cancelSchedule, updateScheduleStatus } from '../api/rides';
+import { getMyDriverTrips } from '../api/trips';
+import { cancelSchedule, updateScheduleStatus } from '../api/rides';
 
 const STATUS_TONE = { CREATED: 'matched', ACTIVE: 'matched', STARTED: 'live', COMPLETED: 'completed', CANCELLED: 'cancelled' };
 
@@ -26,12 +28,10 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling, onStartRide, onE
       background: '#fff', borderRadius: 'var(--radius-lg)', padding: '16px',
       boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 10 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {ride.pickupLabel || 'Pickup'} → {ride.dropoffLabel || 'Drop-off'}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
+          <RouteDisplay pickup={ride.pickupLabel} dropoff={ride.dropoffLabel} />
+          <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 8 }}>
             {dateStr} · {timeStr}
           </div>
         </div>
@@ -44,7 +44,7 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling, onStartRide, onE
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <WpIcon name="users" size={14} color="var(--asphalt-500)" />
           <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-mono)' }}>
-            {ride.availableSeats || 0} seats free
+            {ride.seatsLeft ?? ride.availableSeats ?? 0} seats free
           </span>
         </div>
         {ride.fare != null && (
@@ -69,7 +69,7 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling, onStartRide, onE
         >
           View requests →
         </button>
-        {ride.status === 'ACTIVE' && (
+        {(ride.status === 'CREATED' || ride.status === 'ACTIVE') && (
           <button
             onClick={() => onStartRide(ride.id)}
             disabled={statusChanging}
@@ -133,15 +133,14 @@ export default function DriverMyRidesScreen() {
   useDriverLocationStream(startedRideId);
 
   const load = () => {
-    if (!currentUser?.id) return;
     setLoading(true);
-    getSchedule(currentUser.id)
+    getMyDriverTrips()
       .then(res => setRides(res.data?.data || []))
       .catch(() => setRides([]))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [currentUser?.id]);
+  useEffect(() => { load(); }, []);
 
   const handleStartRide = async (rideId) => {
     setStatusChangingId(rideId);
@@ -230,7 +229,7 @@ export default function DriverMyRidesScreen() {
                   <RideCard
                     key={r.id}
                     ride={r}
-                    onViewRequests={id => navigate(`/driver/inbox/${id}`)}
+                    onViewRequests={id => navigate(`/driver/trips/${id}/bookings`)}
                     onCancel={handleCancel}
                     cancelling={cancellingId === r.id}
                     onStartRide={handleStartRide}
@@ -251,7 +250,7 @@ export default function DriverMyRidesScreen() {
                   <RideCard
                     key={r.id}
                     ride={r}
-                    onViewRequests={id => navigate(`/driver/inbox/${id}`)}
+                    onViewRequests={id => navigate(`/driver/trips/${id}/bookings`)}
                     onCancel={handleCancel}
                     cancelling={cancellingId === r.id}
                     onStartRide={handleStartRide}

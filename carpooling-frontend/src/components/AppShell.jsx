@@ -7,7 +7,7 @@ import { getUnreadCount, getMyNotifications, markAllRead } from '../api/notifica
 
 const RIDER_NAV = [
   { id: 'home',     label: 'Home',        icon: 'home',    path: '/home' },
-  { id: 'match',    label: 'Find a ride', icon: 'search',  path: '/match' },
+  { id: 'match',    label: 'Find a ride', icon: 'search',  path: '/trips' },
   { id: 'trips',    label: 'My trips',    icon: 'car',     path: '/my-trips' },
   { id: 'payments', label: 'Payments',    icon: 'wallet',  path: '/payments' },
   { id: 'profile',  label: 'Profile',     icon: 'user',    path: '/profile' },
@@ -109,7 +109,7 @@ export default function AppShell({ children, activityState }) {
       <aside style={{
         width: 220, flexShrink: 0, background: 'var(--ink-950)',
         display: 'flex', flexDirection: 'column',
-        position: 'fixed', top: 0, bottom: 0, left: 0, overflowY: 'auto', zIndex: 50,
+        position: 'fixed', top: 0, bottom: 0, left: 0, overflowY: 'auto', zIndex: 150,
       }}>
         {/* Logo */}
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -226,7 +226,7 @@ export default function AppShell({ children, activityState }) {
       {/* ── Notifications panel ─────────────────────────────────────────── */}
       {notifOpen && (
         <>
-          <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
+          <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', top: 0, bottom: 0, left: 220, right: 0, zIndex: 99 }} />
           <div style={{
             position: 'fixed', left: 232, bottom: 60, zIndex: 100,
             background: '#fff', borderRadius: 'var(--radius-xl)', width: 360,

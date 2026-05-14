@@ -37,6 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -179,7 +181,9 @@ public class RideScheduleServiceImpl implements RideScheduleService {
 
     @Override
     public List<RideScheduleResponse> searchSchedules(String driverName, LocalDate departureDate, Short availableSeats, GenderPreference gender) {
-        return rideScheduleRepository.searchSchedules(driverName, departureDate, availableSeats, gender)
+        OffsetDateTime dateStart = departureDate != null ? departureDate.atStartOfDay().atOffset(ZoneOffset.UTC) : null;
+        OffsetDateTime dateEnd   = departureDate != null ? departureDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC) : null;
+        return rideScheduleRepository.searchSchedules(driverName, dateStart, dateEnd, availableSeats, gender)
                 .stream().map(this::toResponse).toList();
     }
 

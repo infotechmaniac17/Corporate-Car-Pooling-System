@@ -10,6 +10,8 @@ import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import HomeScreen from './screens/HomeScreen';
 import MatchingScreen from './screens/MatchingScreen';
+import TripFeedScreen from './screens/TripFeedScreen';
+import TripDetailScreen from './screens/TripDetailScreen';
 import TrackingScreen from './screens/TrackingScreen';
 import ChatScreen from './screens/ChatScreen';
 import SosScreen from './screens/SosScreen';
@@ -30,6 +32,7 @@ import PassengerTripsScreen from './screens/PassengerTripsScreen';
 import GuardianContactsScreen from './screens/GuardianContactsScreen';
 import RateRideScreen from './screens/RateRideScreen';
 import DriverBackupRidesScreen from './screens/DriverBackupRidesScreen';
+import DriverTripBookingsScreen from './screens/DriverTripBookingsScreen';
 
 // ─── Mode-switch blocker modal ────────────────────────────────────────────────
 
@@ -100,13 +103,24 @@ function UserRoute({ children, driverOnly = false, activityState }) {
   if (driverOnly && !isAdmin) {
     if (!isDriver) return <Navigate to="/home" replace />;
     if (activeMode !== 'driver') {
+      const modal = (
+        <DriverModeModal
+          onClose={() => navigate(-1)}
+          onSwitch={() => setActiveMode('driver')}
+        />
+      );
+      if (isDesktop) {
+        return (
+          <AppShell activityState={activityState}>
+            <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }} />
+            {modal}
+          </AppShell>
+        );
+      }
       return (
         <>
-          <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--asphalt-50)' }} />
-          <DriverModeModal
-            onClose={() => navigate(-1)}
-            onSwitch={() => setActiveMode('driver')}
-          />
+          <div className="device-frame" style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }} />
+          {modal}
         </>
       );
     }
@@ -167,6 +181,11 @@ function MatchingWrapper() {
   );
 }
 
+function TripFeedWrapper() {
+  const navigate = useNavigate();
+  return <TripFeedScreen onBack={() => navigate(-1)} />;
+}
+
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 function U({ children, driverOnly = false, activityState }) {
@@ -194,6 +213,8 @@ export default function App() {
       {/* Rider / driver */}
       <Route path="/home"             element={<U activityState={activityState}><HomeScreen activityState={activityState} /></U>} />
       <Route path="/match"            element={<U activityState={activityState}><MatchingWrapper /></U>} />
+      <Route path="/trips"            element={<U activityState={activityState}><TripFeedWrapper /></U>} />
+      <Route path="/trips/:tripId"    element={<U activityState={activityState}><TripDetailScreen /></U>} />
       <Route path="/tracking/:rideId" element={<U activityState={activityState}><TrackingWrapper /></U>} />
       <Route path="/chat/:rideId"     element={<U activityState={activityState}><ChatWrapper /></U>} />
       <Route path="/sos/:rideId"      element={<U activityState={activityState}><SosWrapper /></U>} />
@@ -211,6 +232,7 @@ export default function App() {
       <Route path="/guardians"                 element={<U activityState={activityState}><GuardianContactsScreen /></U>} />
       <Route path="/rate/:rideId"              element={<U activityState={activityState}><RateRideScreen /></U>} />
       <Route path="/driver/backup-rides"       element={<U driverOnly activityState={activityState}><DriverBackupRidesScreen /></U>} />
+      <Route path="/driver/trips/:tripId/bookings" element={<U driverOnly activityState={activityState}><DriverTripBookingsScreen /></U>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

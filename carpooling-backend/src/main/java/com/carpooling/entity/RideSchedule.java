@@ -71,6 +71,13 @@ public class RideSchedule {
     @Column(name = "cancel_reason")
     private String cancelReason;
 
+    @Column(name = "booked_seats", nullable = false)
+    @Builder.Default
+    private Integer bookedSeats = 0;
+
+    @Column(name = "recurring_days", length = 50)
+    private String recurringDays;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
