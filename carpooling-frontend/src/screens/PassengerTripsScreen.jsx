@@ -1,106 +1,195 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WpAppBar from '../components/WpAppBar';
 import WpButton from '../components/WpButton';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
-import RouteDisplay from '../components/RouteDisplay';
+import WpToast, { useToast } from '../components/WpToast';
+import RoutePreviewMap from '../components/RoutePreviewMap';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { getMyBookings } from '../api/trips';
-import { cancelBooking } from '../api/trips';
+import { getMyBookings, cancelBooking } from '../api/trips';
+import { areaLabel, haversineKm, passengerCo2Saved } from '../utils/rideCalc';
+import BookingDetailSheet from '../components/BookingDetailSheet';
 
-const STATUS_TONE = {
-  ACTIVE: 'live',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled',
+// ─── Style constants ───────────────────────────────────────────────────────────
+
+const SHIMMER = {
+  background: 'linear-gradient(90deg, var(--asphalt-100) 25%, var(--asphalt-50) 50%, var(--asphalt-100) 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.4s infinite',
 };
 
-function TripCard({ trip, onTrack, onChat, onRate, onCancel, cancelling }) {
-  const scheduled = trip.departureTime ? new Date(trip.departureTime) : null;
-  const timeStr = scheduled
-    ? scheduled.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '—';
-  const dateStr = scheduled
-    ? scheduled.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-    : '—';
+const BTN_BASE = {
+  height: 36, padding: '0 14px', borderRadius: 'var(--radius-md)',
+  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+  border: 'none',
+};
+const BTN_PRIMARY = { ...BTN_BASE, background: 'var(--ink-600)', color: '#fff' };
+const BTN_GHOST   = { ...BTN_BASE, background: '#fff', color: 'var(--asphalt-700)', border: '1.5px solid var(--asphalt-200)' };
+const BTN_DANGER  = { ...BTN_BASE, background: 'var(--danger-600)', color: '#fff' };
 
-  const isLive = trip.status === 'ACTIVE' &&
-    (trip.scheduleStatus === 'STARTED' || trip.scheduleStatus === 'ACTIVE');
-  const isCompleted = trip.status === 'COMPLETED';
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function passengerVirtualStatus(booking) {
+  const s  = booking.status;
+  const ss = booking.scheduleStatus;
+  if (s === 'COMPLETED') return 'COMPLETED';
+  if (s === 'CANCELLED') return 'CANCELLED';
+  if (ss === 'STARTED')   return 'LIVE';
+  if (ss === 'COMPLETED') return 'COMPLETED';
+  if (ss === 'CANCELLED') return 'CANCELLED';
+  const dep = booking.departureTime ? new Date(booking.departureTime).getTime() : null;
+  if (!dep) return 'UPCOMING';
+  const diffMin = (dep - Date.now()) / 60000;
+  if (diffMin < -30) return 'OVERDUE';
+  if (diffMin <= 30 && diffMin > 0) return 'IMMINENT';
+  return 'UPCOMING';
+}
+
+function pillConfig(vStatus) {
+  switch (vStatus) {
+    case 'LIVE':      return { tone: 'live',      label: '● LIVE' };
+    case 'COMPLETED': return { tone: 'completed',  label: 'COMPLETED' };
+    case 'CANCELLED': return { tone: 'cancelled',  label: 'CANCELLED' };
+    case 'OVERDUE':   return { tone: 'cancelled',  label: 'DELAYED' };
+    case 'IMMINENT':  return { tone: 'matched',    label: 'SOON' };
+    default:          return { tone: 'matched',    label: 'UPCOMING' };
+  }
+}
+
+function bookingCo2(b) {
+  if (!b.pickupLat || !b.dropoffLat || b.status !== 'COMPLETED') return null;
+  const km = haversineKm(b.pickupLat, b.pickupLng, b.dropoffLat, b.dropoffLng);
+  const g = km * 120;
+  return g >= 1000 ? `${(g / 1000).toFixed(1)} kg` : `${Math.round(g)} g`;
+}
+
+function hasRated(bookingId) {
+  try {
+    const arr = JSON.parse(localStorage.getItem('rated_bookings') || '[]');
+    return arr.includes(bookingId);
+  } catch { return false; }
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function SkeletonCard() {
+  return <div style={{ height: 120, borderRadius: 'var(--radius-xl)', ...SHIMMER }} />;
+}
+
+function SkeletonRow() {
+  return <div style={{ height: 56, borderRadius: 'var(--radius-lg)', ...SHIMMER }} />;
+}
+
+// ─── ActiveBookingCard ────────────────────────────────────────────────────────
+
+function ActiveBookingCard({ booking, selected, onSelect, onCancelClick, cancelling }) {
+  const navigate = useNavigate();
+  const vStatus = passengerVirtualStatus(booking);
+  const { tone, label } = pillConfig(vStatus);
+
+  const dep = booking.departureTime ? new Date(booking.departureTime) : null;
+  const dateStr = dep ? dep.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : '—';
+  const timeStr = dep ? dep.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
+
+  const rideId = booking.tripId ?? booking.rideId;
+  const inProgress = booking.scheduleStatus === 'STARTED';
+  const canCancel = !['COMPLETED', 'CANCELLED'].includes(vStatus) && !inProgress;
+  const rated = hasRated(booking.id);
 
   return (
-    <div style={{
-      background: '#fff', borderRadius: 'var(--radius-lg)', padding: '16px',
-      boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 10 }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <RouteDisplay pickup={trip.pickupLabel} dropoff={trip.dropoffLabel} />
-          <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 8 }}>
-            {dateStr} · {timeStr}
-          </div>
-        </div>
-        <WpPill tone={STATUS_TONE[trip.status] || 'matched'}>{trip.status}</WpPill>
-      </div>
-
-      <div style={{ display: 'flex', gap: 20, marginBottom: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <WpIcon name="user" size={14} color="var(--asphalt-500)" />
-          <span style={{ fontSize: 13, color: 'var(--asphalt-700)', fontFamily: 'var(--font-sans)' }}>
-            {trip.driverName || '—'}
+    <div
+      onClick={() => onSelect(booking.id)}
+      style={{
+        background: '#fff',
+        borderRadius: 'var(--radius-xl)',
+        border: `1.5px solid ${selected ? 'var(--ink-400)' : 'var(--asphalt-100)'}`,
+        boxShadow: selected ? 'var(--shadow-2)' : 'var(--shadow-1)',
+        padding: 20,
+        cursor: 'pointer',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      }}
+    >
+      {/* Row 1 — Route + pill */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {areaLabel(booking.pickupLabel)}
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--asphalt-400)', flexShrink: 0 }}>→</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {areaLabel(booking.dropoffLabel)}
           </span>
         </div>
-        {trip.vehicleNumber && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <WpIcon name="car" size={14} color="var(--asphalt-500)" />
-            <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-mono)' }}>
-              {trip.vehicleNumber}
-            </span>
-          </div>
+        <div style={{ flexShrink: 0 }}><WpPill tone={tone}>{label}</WpPill></div>
+      </div>
+
+      {/* Row 2 — Date + time */}
+      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)', marginBottom: 10 }}>
+        🗓 {dateStr} · ⏰ {timeStr}
+      </div>
+
+      {/* Row 3 — Driver + vehicle */}
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 10 }}>
+        {booking.driverName && (
+          <span style={{ fontSize: 13, color: 'var(--asphalt-700)' }}>
+            <WpIcon name="user" size={13} color="var(--asphalt-400)" /> {booking.driverName}
+          </span>
         )}
-        {trip.fare != null && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <WpIcon name="wallet" size={14} color="var(--asphalt-500)" />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-800)', fontFamily: 'var(--font-mono)' }}>
-              ₹{trip.fare}
-            </span>
-          </div>
+        {booking.vehicleNumber && (
+          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)' }}>
+            {booking.vehicleNumber}
+          </span>
+        )}
+        {booking.fare != null && (
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>
+            ₹{booking.fare}
+          </span>
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        {isLive && (
+      {/* Row 4 — Actions */}
+      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {vStatus === 'LIVE' && (
           <>
             <button
-              onClick={() => onTrack(trip.rideId)}
-              style={btnStyle('var(--ink-50)', 'var(--ink-700)', '1.5px solid var(--ink-100)')}
+              onClick={() => navigate(`/tracking/${rideId}`)}
+              aria-label="Track ride"
+              style={{ ...BTN_BASE, border: '1.5px solid var(--ink-200)', background: 'var(--ink-50)', color: 'var(--ink-700)' }}
             >
-              <WpIcon name="map" size={14} color="var(--ink-600)" /> Track
+              Track ride
             </button>
             <button
-              onClick={() => onChat(trip.rideId)}
-              style={btnStyle('var(--ink-50)', 'var(--ink-700)', '1.5px solid var(--ink-100)')}
+              onClick={() => navigate(`/chat/${rideId}`)}
+              aria-label="Chat with driver"
+              style={{ ...BTN_BASE, border: '1.5px solid var(--asphalt-200)', background: '#fff', color: 'var(--asphalt-700)' }}
             >
-              <WpIcon name="message" size={14} color="var(--ink-600)" /> Chat
+              Chat
             </button>
           </>
         )}
-        {isCompleted && (
+        {vStatus === 'COMPLETED' && !rated && (
           <button
-            onClick={() => onRate(trip)}
-            style={btnStyle('var(--success-100)', 'var(--success-700)', '1.5px solid rgba(24,169,87,0.2)')}
+            onClick={() => navigate(`/rate/${rideId}?driverId=${booking.driverId}`)}
+            aria-label="Rate driver"
+            style={{ ...BTN_BASE, border: '1.5px solid var(--success-300)', background: 'var(--success-50)', color: 'var(--success-700)' }}
           >
-            <WpIcon name="star" size={14} color="var(--success-700)" /> Rate driver
+            ⭐ Rate driver
           </button>
         )}
-        {!isLive && !isCompleted && trip.status === 'ACTIVE' && onCancel && (
+        {inProgress && !canCancel && (
+          <span style={{ fontSize: 12, color: 'var(--asphalt-400)', alignSelf: 'center' }}>
+            Ride is in progress — you cannot cancel now.
+          </span>
+        )}
+        {canCancel && (
           <button
-            onClick={() => onCancel(trip)}
+            onClick={() => onCancelClick(booking)}
             disabled={cancelling}
+            aria-label="Cancel booking"
             style={{
-              ...btnStyle('var(--danger-50)', 'var(--danger-700)', '1.5px solid var(--danger-200)'),
-              opacity: cancelling ? 0.5 : 1,
-              cursor: cancelling ? 'wait' : 'pointer',
+              ...BTN_BASE, border: '1.5px solid var(--danger-200)', background: 'var(--danger-50)', color: 'var(--danger-700)',
+              opacity: cancelling ? 0.5 : 1, cursor: cancelling ? 'not-allowed' : 'pointer',
             }}
           >
             {cancelling ? 'Cancelling…' : 'Cancel booking'}
@@ -111,247 +200,429 @@ function TripCard({ trip, onTrack, onChat, onRate, onCancel, cancelling }) {
   );
 }
 
-const btnStyle = (bg, color, border) => ({
-  flex: 1, padding: '9px 12px', borderRadius: 'var(--radius-md)',
-  background: bg, border, color,
-  fontSize: 13, fontWeight: 600, cursor: 'pointer',
-  fontFamily: 'var(--font-sans)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-});
+// ─── PastTripRow ──────────────────────────────────────────────────────────────
 
-export default function PassengerTripsScreen() {
-  const navigate = useNavigate();
-  const isDesktop = useIsDesktop();
-  const [trips, setTrips] = useState([]);
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [cancellingId, setCancellingId] = useState(null);
+function PastTripRow({ booking, onClick, isDesktop }) {
+  const { tone, label } = pillConfig(passengerVirtualStatus(booking));
+  const dep = booking.departureTime ? new Date(booking.departureTime) : null;
+  const dateStr = dep ? dep.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—';
+  const co2 = bookingCo2(booking) ?? '—';
 
-  const load = () => {
-    setLoading(true);
-    getMyBookings()
-      .then(r => {
-        const bookings = r.data?.data || [];
-        // Map bookings to trip-card-compatible shape
-        const mapped = bookings.map(b => ({
-          id: b.id,
-          rideId: b.tripId,
-          driverId: b.driverId,
-          driverName: b.driverName,
-          vehicleNumber: b.vehicleNumber,
-          pickupLabel: b.pickupLabel,
-          dropoffLabel: b.dropoffLabel,
-          departureTime: b.departureTime,
-          fare: b.fare,
-          status: b.status === 'CONFIRMED' ? 'ACTIVE' : b.status,
-          scheduleStatus: b.tripStatus,
-        }));
-        setTrips(mapped);
-        setRequests([]);
-      })
-      .catch(() => setTrips([]))
-      .finally(() => setLoading(false));
+  const rowStyle = {
+    background: '#fff', borderRadius: 'var(--radius-lg)',
+    border: '1px solid var(--asphalt-100)', padding: '14px 16px',
+    cursor: 'pointer', transition: 'background 0.1s',
   };
-
-  useEffect(() => { load(); }, []);
-
-  const handleCancelRequest = async (req) => {
-    if (!window.confirm('Cancel this booking?')) return;
-    setCancellingId(`req-${req.id}`);
-    try {
-      await cancelBooking(req.rideId, req.id);
-      await load();
-    } catch (err) {
-      alert(err?.response?.data?.message || 'Failed to cancel booking.');
-    } finally {
-      setCancellingId(null);
-    }
-  };
-
-  const sorted = [...trips].sort((a, b) => {
-    const ta = a.departureTime ? new Date(a.departureTime).getTime() : 0;
-    const tb = b.departureTime ? new Date(b.departureTime).getTime() : 0;
-    return tb - ta;
-  });
-  const upcoming = sorted.filter(t => t.status === 'ACTIVE');
-  const past = sorted.filter(t => t.status !== 'ACTIVE');
-  const pendingRequests = requests.filter(r => r.status === 'PENDING' || r.status === 'ACCEPTED');
-
-  const handleRate = (trip) => {
-    navigate(`/rate/${trip.rideId}?driverId=${trip.driverId}`);
-  };
-
-  const Content = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 13, color: 'var(--asphalt-500)' }}>
-          {upcoming.length} active · {past.length} past
-        </div>
-        <WpButton kind="accent" size="sm" onClick={() => navigate('/trips')}>
-          <WpIcon name="search" size={15} color="var(--ink-950)" />
-          Find a ride
-        </WpButton>
-      </div>
-
-      {!loading && pendingRequests.length > 0 && (
-        <div>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-700)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: 'var(--font-mono)' }}>
-            Pending requests
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pendingRequests.map(r => {
-              const dep = r.departureTime ? new Date(r.departureTime) : null;
-              const when = dep
-                ? `${dep.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · ${dep.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                : '—';
-              return (
-                <div key={`req-${r.id}`} style={{
-                  background: '#fff', borderRadius: 'var(--radius-lg)', padding: '16px',
-                  boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 10 }}>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <RouteDisplay pickup={r.pickupLabel} dropoff={r.dropoffLabel} />
-                      <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 8 }}>
-                        {when} · driver {r.driverName || '—'}
-                      </div>
-                    </div>
-                    <WpPill tone={r.status === 'ACCEPTED' ? 'live' : 'matched'}>{r.status}</WpPill>
-                  </div>
-                  <button
-                    onClick={() => handleCancelRequest(r)}
-                    disabled={cancellingId === `req-${r.id}`}
-                    style={{
-                      width: '100%', padding: '9px', borderRadius: 'var(--radius-md)',
-                      border: '1.5px solid var(--danger-200)', background: 'var(--danger-50)',
-                      fontSize: 13, fontWeight: 600, color: 'var(--danger-700)',
-                      cursor: cancellingId === `req-${r.id}` ? 'wait' : 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      opacity: cancellingId === `req-${r.id}` ? 0.5 : 1,
-                    }}
-                  >
-                    {cancellingId === `req-${r.id}` ? 'Cancelling…' : 'Cancel request'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[1, 2, 3].map(i => (
-            <div key={i} style={{ height: 130, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(90deg, var(--asphalt-100) 25%, var(--asphalt-50) 50%, var(--asphalt-100) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
-          ))}
-        </div>
-      ) : trips.length === 0 && pendingRequests.length === 0 ? (
-        <div style={{ background: '#fff', borderRadius: 'var(--radius-lg)', padding: '40px 20px', textAlign: 'center', border: '1.5px dashed var(--asphalt-200)' }}>
-          <WpIcon name="search" size={36} color="var(--asphalt-300)" />
-          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--asphalt-600)', marginTop: 12 }}>No trips yet</p>
-          <p style={{ fontSize: 13, color: 'var(--asphalt-400)', marginTop: 4 }}>Find a ride to start commuting</p>
-          <div style={{ marginTop: 16 }}>
-            <WpButton kind="accent" size="md" onClick={() => navigate('/trips')}>Find a ride</WpButton>
-          </div>
-        </div>
-      ) : (
-        <>
-          {upcoming.length > 0 && (
-            <div>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-700)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: 'var(--font-mono)' }}>
-                Active
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {upcoming.map(t => (
-                  <TripCard
-                    key={t.id}
-                    trip={t}
-                    onTrack={id => navigate(`/tracking/${id}`)}
-                    onChat={id => navigate(`/chat/${id}`)}
-                    onRate={handleRate}
-                    onCancel={handleCancelRequest}
-                    cancelling={cancellingId === `req-${t.id}`}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {past.length > 0 && (
-            <div>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-400)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: 'var(--font-mono)' }}>
-                Past trips
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {past.map(t => (
-                  <TripCard
-                    key={t.id}
-                    trip={t}
-                    onTrack={id => navigate(`/tracking/${id}`)}
-                    onChat={id => navigate(`/chat/${id}`)}
-                    onRate={handleRate}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+  const hoverOn  = e => { e.currentTarget.style.background = 'var(--asphalt-50)'; };
+  const hoverOff = e => { e.currentTarget.style.background = '#fff'; };
+  const handleKey = e => { if (e.key === 'Enter' || e.key === ' ') onClick(); };
 
   if (isDesktop) {
-    const completed = trips.filter(t => t.status === 'COMPLETED').length;
-    const cancelled = trips.filter(t => t.status === 'CANCELLED').length;
-    const totalSpend = trips
-      .filter(t => t.status === 'COMPLETED' && t.fare != null)
-      .reduce((s, t) => s + Number(t.fare || 0), 0);
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
-        <div style={{ padding: '32px 40px 0' }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em' }}>My trips</h1>
-          <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Active and past trips you've joined</p>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, padding: '24px 40px 40px', alignItems: 'start' }}>
-          <Content />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Overview</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
-                  { label: 'Total trips', value: trips.length, icon: 'car', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
-                  { label: 'Active', value: upcoming.length, icon: 'clock', bg: 'var(--voltage-50, #f5ffe0)', color: 'var(--ink-600)' },
-                  { label: 'Completed', value: completed, icon: 'check', bg: 'var(--success-100)', color: 'var(--success-700)' },
-                  { label: 'Cancelled', value: cancelled, icon: 'x', bg: 'var(--asphalt-100)', color: 'var(--asphalt-500)' },
-                  { label: 'Spent (₹)', value: totalSpend, icon: 'wallet', bg: 'var(--asphalt-100)', color: 'var(--asphalt-700)' },
-                ].map(s => (
-                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <WpIcon name={s.icon} size={14} color={s.color} />
-                      </div>
-                      <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)' }}>{s.label}</span>
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>{s.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <WpButton kind="accent" size="md" full onClick={() => navigate('/trips')}>
-              <WpIcon name="search" size={15} color="var(--ink-950)" />
-              Find a ride
-            </WpButton>
-          </div>
+      <div onClick={onClick} tabIndex={0} role="button" onKeyDown={handleKey}
+        onMouseEnter={hoverOn} onMouseLeave={hoverOff} style={rowStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ width: 64, flexShrink: 0, fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)' }}>
+            {dateStr}
+          </span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: 'var(--asphalt-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {areaLabel(booking.pickupLabel)} → {areaLabel(booking.dropoffLabel)}
+          </span>
+          <span style={{ width: 100, flexShrink: 0, fontSize: 12, color: 'var(--asphalt-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {booking.driverName ?? '—'}
+          </span>
+          <span style={{ width: 52, flexShrink: 0, fontSize: 13, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>
+            {booking.fare != null ? `₹${booking.fare}` : '—'}
+          </span>
+          <span style={{ width: 64, flexShrink: 0, fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)' }}>
+            🌿 {co2}
+          </span>
+          <WpPill tone={tone}>{label}</WpPill>
+          <span style={{ color: 'var(--asphalt-300)', fontSize: 16, flexShrink: 0 }}>›</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)', paddingBottom: 40 }}>
-      <WpAppBar title="My trips" onBack={() => navigate(-1)} dark />
-      <div style={{ padding: 16 }}>
-        <Content />
+    <div onClick={onClick} tabIndex={0} role="button" onKeyDown={handleKey}
+      onMouseEnter={hoverOn} onMouseLeave={hoverOff} style={rowStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--asphalt-800)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
+          {areaLabel(booking.pickupLabel)} → {areaLabel(booking.dropoffLabel)}
+        </span>
+        <WpPill tone={tone}>{label}</WpPill>
       </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px', fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)' }}>
+        <span>{dateStr}</span>
+        <span>·</span>
+        <span>{booking.driverName ?? '—'}</span>
+        <span>·</span>
+        <span>{booking.fare != null ? `₹${booking.fare}` : '—'}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── StatsBar ─────────────────────────────────────────────────────────────────
+
+function StatsBar({ bookings }) {
+  const completed = bookings.filter(b => b.status === 'COMPLETED');
+  const spent = completed.reduce((s, b) => s + (b.fare ?? 0), 0);
+  const co2 = passengerCo2Saved(completed);
+
+  const chips = [
+    { icon: 'car',    iconBg: 'var(--ink-50)',     iconColor: 'var(--ink-600)',     label: 'TOTAL TRIPS', value: completed.length },
+    { icon: 'wallet', iconBg: 'var(--success-100)', iconColor: 'var(--success-700)', label: 'TOTAL SPENT', value: `₹${spent}` },
+    { icon: 'leaf',   iconBg: '#f0fdf4',            iconColor: '#16a34a',            label: 'CO₂ SAVED',   value: co2 },
+  ];
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', border: '1px solid var(--asphalt-100)', padding: '16px 20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+        {chips.map(c => (
+          <div key={c.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: c.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <WpIcon name={c.icon} size={14} color={c.iconColor} />
+            </div>
+            <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              {c.label}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--asphalt-900)', fontFamily: 'var(--font-mono)' }}>
+              {c.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ImminentBanner ───────────────────────────────────────────────────────────
+
+function ImminentBanner({ booking, onDismiss, navigate }) {
+  const dep = booking.departureTime ? new Date(booking.departureTime).getTime() : null;
+  const diffMin = dep ? (dep - Date.now()) / 60000 : 0;
+  const rideId = booking.tripId ?? booking.rideId;
+  const isLive = booking.scheduleStatus === 'STARTED';
+
+  let bg, borderColor, message;
+  if (diffMin > 15) {
+    bg = '#fff8e1'; borderColor = '#ffe082';
+    message = `⏰ Your ride starts in ${Math.round(diffMin)} min — be at pickup`;
+  } else if (diffMin > 0) {
+    bg = '#fff3e0'; borderColor = '#ffb74d';
+    message = `⏰ Ride starting soon — ${Math.round(diffMin)} min left`;
+  } else {
+    bg = 'var(--danger-50)'; borderColor = 'var(--danger-200)';
+    message = 'Driver may be delayed — check ride status';
+  }
+
+  return (
+    <div style={{ background: bg, border: `1px solid ${borderColor}`, borderRadius: 'var(--radius-xl)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--asphalt-800)', flex: 1 }}>{message}</span>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        {isLive && (
+          <button onClick={() => navigate(`/tracking/${rideId}`)} aria-label="Track ride"
+            style={{ ...BTN_BASE, background: 'var(--ink-600)', color: '#fff', whiteSpace: 'nowrap' }}>
+            Track ride →
+          </button>
+        )}
+        <button onClick={onDismiss} aria-label="Dismiss banner"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1, color: 'var(--asphalt-500)', padding: '0 4px' }}>
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── EmptyState ───────────────────────────────────────────────────────────────
+
+function EmptyState({ onFind }) {
+  return (
+    <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', padding: '48px 24px', textAlign: 'center', border: '1.5px dashed var(--asphalt-200)' }}>
+      <WpIcon name="search" size={36} color="var(--asphalt-300)" />
+      <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--asphalt-700)', marginTop: 14, marginBottom: 4 }}>No trips yet</p>
+      <p style={{ fontSize: 13, color: 'var(--asphalt-400)', marginBottom: 20 }}>Find a ride to get started</p>
+      <WpButton kind="accent" size="md" onClick={onFind}>Find a ride</WpButton>
+    </div>
+  );
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
+export default function PassengerTripsScreen() {
+  const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
+  const [toast, showToast, dismissToast] = useToast();
+
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [detailBooking, setDetailBooking] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [confirmCancel, setConfirmCancel] = useState(null);
+  const [imminent, setImminent] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoadError(false);
+    try {
+      const res = await getMyBookings();
+      const raw = res.data?.data || [];
+      const data = raw.map(b => ({
+        ...b,
+        scheduleStatus: b.tripStatus ?? b.scheduleStatus,
+        status: b.status === 'CONFIRMED' ? 'ACTIVE' : b.status,
+      }));
+      setBookings(data);
+      setSelectedBookingId(prev => {
+        const stillExists = prev && data.find(b => b.id === prev);
+        if (stillExists) return prev;
+        return data.find(b => !['COMPLETED', 'CANCELLED'].includes(b.status))?.id ?? null;
+      });
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Re-fetch on tab focus
+  useEffect(() => {
+    const onVisible = () => { if (!document.hidden) load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [load]);
+
+  // Poll 30s while any booking has STARTED schedule
+  useEffect(() => {
+    if (!bookings.some(b => b.scheduleStatus === 'STARTED')) return;
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [bookings, load]);
+
+  // Derived lists
+  const active = bookings.filter(b => !['COMPLETED', 'CANCELLED'].includes(b.status));
+  const past   = bookings.filter(b =>  ['COMPLETED', 'CANCELLED'].includes(b.status));
+
+  // Imminent banner
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now();
+      const found = active.find(b => {
+        if (!b.departureTime) return false;
+        const diffMin = (new Date(b.departureTime).getTime() - now) / 60000;
+        const dismissed = localStorage.getItem(`dismissed_passenger_imminent_${b.id}`);
+        return diffMin <= 30 && diffMin > -30 && !dismissed;
+      });
+      setImminent(found ?? null);
+    };
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [active]);
+
+  // Map wiring
+  const mapBooking = bookings.find(b => b.id === selectedBookingId) ?? null;
+  const mapPickup  = mapBooking ? { lat: mapBooking.pickupLat,  lng: mapBooking.pickupLng,  label: mapBooking.pickupLabel  } : null;
+  const mapDropoff = mapBooking ? { lat: mapBooking.dropoffLat, lng: mapBooking.dropoffLng, label: mapBooking.dropoffLabel } : null;
+
+  // Cancel handler
+  const handleConfirmCancel = useCallback(async () => {
+    const booking = confirmCancel;
+    setConfirmCancel(null);
+    setCancellingId(booking.id);
+    try {
+      await cancelBooking(booking.tripId ?? booking.rideId, booking.id);
+      await load();
+      showToast({ message: 'Booking cancelled', colour: 'grey', duration: 3000 });
+    } catch {
+      showToast({ message: 'Failed to cancel. Try again.', colour: 'red', duration: 5000 });
+    } finally {
+      setCancellingId(null);
+    }
+  }, [confirmCancel, load, showToast]);
+
+  // ── Derived flags ─────────────────────────────────────────────────────────────
+
+  const hasActive  = active.length > 0;
+  const hasPast    = past.length > 0;
+  const hasAny     = bookings.length > 0;
+  const initLoad   = loading && bookings.length === 0;
+
+  // ── Shared blocks ─────────────────────────────────────────────────────────────
+
+  const header = (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+      <div>
+        <h1 style={{ fontSize: isDesktop ? 26 : 22, fontWeight: 800, color: 'var(--asphalt-900)', letterSpacing: '-0.02em', margin: 0 }}>
+          My trips
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 4, marginBottom: 0 }}>
+          {active.length} active · {past.length} past
+        </p>
+      </div>
+      <WpButton kind="accent" size="sm" onClick={() => navigate('/trips')}>
+        <WpIcon name="search" size={15} color="var(--ink-950)" />
+        Find a ride
+      </WpButton>
+    </div>
+  );
+
+  const errorBanner = loadError && (
+    <div style={{ background: 'var(--danger-50)', border: '1px solid var(--danger-200)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <span style={{ fontSize: 13, color: 'var(--danger-700)' }}>Failed to load trips.</span>
+      <button onClick={load} style={{ ...BTN_BASE, background: 'none', border: '1px solid var(--danger-300)', color: 'var(--danger-700)', height: 30 }}>Retry</button>
+    </div>
+  );
+
+  const imminentBanner = imminent && (
+    <ImminentBanner
+      booking={imminent}
+      navigate={navigate}
+      onDismiss={() => {
+        localStorage.setItem(`dismissed_passenger_imminent_${imminent.id}`, '1');
+        setImminent(null);
+      }}
+    />
+  );
+
+  // Inline cancel confirm block
+  const cancelConfirmBlock = confirmCancel && (() => {
+    const dep = confirmCancel.departureTime ? new Date(confirmCancel.departureTime) : null;
+    const ds = dep ? dep.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—';
+    const ts = dep ? dep.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
+    return (
+      <div style={{ background: 'var(--danger-50)', border: '1px solid var(--danger-200)', borderRadius: 'var(--radius-xl)', padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 4 }}>Cancel this booking?</div>
+        <div style={{ fontSize: 12, color: 'var(--asphalt-500)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>
+          Ride to {areaLabel(confirmCancel.dropoffLabel)} on {ds} at {ts}
+        </div>
+        <div style={{ fontSize: 12, color: '#d97706', marginBottom: 12 }}>⚠ Cancellations may affect your reliability score</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleConfirmCancel} disabled={!!cancellingId}
+            style={{ ...BTN_DANGER, opacity: cancellingId ? 0.5 : 1, cursor: cancellingId ? 'not-allowed' : 'pointer' }}>
+            {cancellingId ? 'Cancelling…' : 'Yes, cancel'}
+          </button>
+          <button onClick={() => setConfirmCancel(null)} style={BTN_GHOST}>Keep booking</button>
+        </div>
+      </div>
+    );
+  })();
+
+  const activeCards = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {initLoad
+        ? [1, 2].map(i => <SkeletonCard key={i} />)
+        : active.map(b => (
+            <ActiveBookingCard
+              key={b.id}
+              booking={b}
+              selected={selectedBookingId === b.id}
+              onSelect={setSelectedBookingId}
+              onCancelClick={setConfirmCancel}
+              cancelling={cancellingId === b.id}
+            />
+          ))
+      }
+    </div>
+  );
+
+  const statsBar = hasPast && <StatsBar bookings={bookings} />;
+
+  const pastSection = hasPast && (
+    <div>
+      <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: 'var(--font-mono)', marginBottom: 10, marginTop: 0 }}>
+        Past trips
+      </h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {initLoad
+          ? [1, 2, 3, 4].map(i => <SkeletonRow key={i} />)
+          : past.map(b => (
+              <PastTripRow key={b.id} booking={b} onClick={() => setDetailBooking(b)} isDesktop={isDesktop} />
+            ))
+        }
+      </div>
+    </div>
+  );
+
+
+  // ── Desktop layout ────────────────────────────────────────────────────────────
+
+  if (isDesktop) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 40px 60px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {header}
+            {errorBanner}
+            {imminentBanner}
+            {cancelConfirmBlock}
+
+            {!hasAny && !initLoad
+              ? <EmptyState onFind={() => navigate('/trips')} />
+              : (
+                <>
+                  {(hasActive || initLoad) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+                        {activeCards}
+                      </div>
+                      <div style={{ position: 'sticky', top: 24 }}>
+                        <div style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden', height: 'calc(100vh - 200px)', maxHeight: 500 }}>
+                          <RoutePreviewMap pickup={mapPickup} dropoff={mapDropoff} height={500} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {statsBar}
+                  {pastSection}
+                </>
+              )
+            }
+          </div>
+        </div>
+        <WpToast toast={toast} onDismiss={dismissToast} isDesktop />
+        {detailBooking && <BookingDetailSheet booking={detailBooking} onClose={() => setDetailBooking(null)} isDesktop />}
+      </div>
+    );
+  }
+
+  // ── Mobile layout ─────────────────────────────────────────────────────────────
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)', paddingBottom: 60 }}>
+      <WpAppBar title="My trips" onBack={() => navigate(-1)} dark />
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {header}
+        {errorBanner}
+        {imminentBanner}
+        {cancelConfirmBlock}
+
+        {!hasAny && !initLoad
+          ? <EmptyState onFind={() => navigate('/trips')} />
+          : (
+            <>
+              {(hasActive || initLoad) && (
+                <>
+                  {activeCards}
+                  <div style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden', height: 220, background: '#fff', border: '1px solid var(--asphalt-100)' }}>
+                    <RoutePreviewMap pickup={mapPickup} dropoff={mapDropoff} height={220} />
+                  </div>
+                </>
+              )}
+              {statsBar}
+              {pastSection}
+            </>
+          )
+        }
+      </div>
+      <WpToast toast={toast} onDismiss={dismissToast} isDesktop={false} />
+      {detailBooking && <BookingDetailSheet booking={detailBooking} onClose={() => setDetailBooking(null)} isDesktop={false} />}
     </div>
   );
 }

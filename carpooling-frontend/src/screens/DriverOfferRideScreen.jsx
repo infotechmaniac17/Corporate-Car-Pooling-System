@@ -22,7 +22,7 @@ function Field({ label, children }) {
   );
 }
 
-function TextInput({ value, onChange, placeholder, type = 'text' }) {
+function TextInput({ value, onChange, placeholder, type = 'text', onBlur }) {
   return (
     <input
       type={type}
@@ -35,7 +35,7 @@ function TextInput({ value, onChange, placeholder, type = 'text' }) {
         color: 'var(--asphalt-900)', background: '#fff', outline: 'none', boxSizing: 'border-box',
       }}
       onFocus={e => e.target.style.borderColor = 'var(--ink-600)'}
-      onBlur={e => e.target.style.borderColor = 'var(--asphalt-200)'}
+      onBlur={e => { e.target.style.borderColor = 'var(--asphalt-200)'; onBlur?.(); }}
     />
   );
 }
@@ -61,6 +61,32 @@ export default function DriverOfferRideScreen({ activityState }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [dateError, setDateError] = useState('');
+  const [timeError, setTimeError] = useState('');
+
+  const validateDate = (val) => {
+    if (!val) return 'Departure date is required';
+    const d = new Date(val);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (d < today) return 'Departure date cannot be in the past';
+    const max = new Date(today); max.setDate(max.getDate() + 30);
+    if (d > max) return 'You can schedule at most 30 days ahead';
+    return '';
+  };
+
+  const validateTime = (dateVal, timeVal) => {
+    if (!dateVal || !timeVal) return '';
+    const dep = new Date(`${dateVal}T${timeVal}:00`);
+    const h = dep.getHours();
+    if (h < 5 || h >= 23) return 'Rides can only be scheduled between 5 AM and 11 PM';
+    const depDate = new Date(dateVal); depDate.setHours(0, 0, 0, 0);
+    const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
+    if (depDate.getTime() === todayDate.getTime()) {
+      const minTime = new Date(Date.now() + 30 * 60 * 1000);
+      if (dep < minTime) return 'Departure time must be at least 30 minutes from now';
+    }
+    return '';
+  };
 
   useEffect(() => {
     getMyVehicles()
@@ -105,8 +131,15 @@ export default function DriverOfferRideScreen({ activityState }) {
       });
       setSuccess(true);
       setTimeout(() => navigate('/driver/my-rides'), 1200);
-    } catch {
-      setError('Failed to create ride. Try again.');
+    } catch (err) {
+      const msg = err?.response?.data?.message || '';
+      if (msg.toLowerCase().includes('active') || msg.toLowerCase().includes('upcoming')) {
+        setError('You already have an active or upcoming ride. Cancel it first.');
+      } else if (msg.toLowerCase().includes('vehicle')) {
+        setError('This vehicle is not registered to your account.');
+      } else {
+        setError('Failed to create ride. Try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -160,10 +193,22 @@ export default function DriverOfferRideScreen({ activityState }) {
           </div>
         )}
         <Field label="Date">
-          <TextInput value={date} onChange={setDate} type="date" />
+          <TextInput
+            value={date}
+            onChange={val => { setDate(val); setDateError(validateDate(val)); }}
+            type="date"
+            onBlur={() => setDateError(validateDate(date))}
+          />
+          {dateError && <div style={{ fontSize: 12, color: 'var(--danger-600)', marginTop: 4, fontFamily: 'var(--font-sans)' }}>{dateError}</div>}
         </Field>
         <Field label="Departure time">
-          <TextInput value={time} onChange={setTime} type="time" />
+          <TextInput
+            value={time}
+            onChange={val => { setTime(val); }}
+            type="time"
+            onBlur={() => setTimeError(validateTime(date, time))}
+          />
+          {timeError && <div style={{ fontSize: 12, color: 'var(--danger-600)', marginTop: 4, fontFamily: 'var(--font-sans)' }}>{timeError}</div>}
         </Field>
         <Field label="Available seats">
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -227,7 +272,7 @@ export default function DriverOfferRideScreen({ activityState }) {
         </div>
       )}
 
-      <WpButton kind="accent" size="md" full onClick={handleSubmit} disabled={submitting || success || isBlocked || noVehicles}>
+      <WpButton kind="accent" size="md" full onClick={handleSubmit} disabled={submitting || success || isBlocked || noVehicles || !!dateError || !!timeError}>
         {submitting ? 'Creating…' : 'Offer this ride'}
       </WpButton>
     </div>
