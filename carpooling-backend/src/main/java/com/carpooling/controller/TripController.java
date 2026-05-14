@@ -85,7 +85,10 @@ public class TripController {
     }
 
     private Long extractUserId(HttpServletRequest request) {
-        String token = request.getHeader("Authorization").substring(7);
-        return jwtUtil.extractUserId(token);
+        String auth = request.getHeader("Authorization");
+        if (auth == null || !auth.startsWith("Bearer ")) {
+            throw new com.carpooling.common.exception.BusinessException("Unauthorized");
+        }
+        return jwtUtil.extractUserId(auth.substring(7));
     }
 }

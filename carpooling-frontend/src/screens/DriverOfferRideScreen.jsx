@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import WpAppBar from '../components/WpAppBar';
@@ -8,6 +8,8 @@ import AddressInput from '../components/AddressInput';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { publishTrip } from '../api/trips';
 import { getMyVehicles } from '../api/vehicles';
+
+const RoutePreviewMap = lazy(() => import('../components/RoutePreviewMap'));
 
 function Field({ label, children }) {
   return (
@@ -237,12 +239,6 @@ export default function DriverOfferRideScreen({ activityState }) {
       { icon: 'users', title: 'Offer more seats', desc: 'More seats = more matches. Even 3 seats doubles your chance of getting riders.', bg: 'var(--ink-50)', color: 'var(--ink-600)' },
       { icon: 'clock', title: 'Be punctual', desc: 'Riders plan their commute around your schedule. A consistent time builds trust.', bg: 'var(--voltage-50, #f5ffe0)', color: 'var(--ink-600)' },
     ];
-    const steps = [
-      'Post a ride with your route and time',
-      'Riders from your organisation request to join',
-      'You accept or decline each request',
-      'Complete the ride and get rated',
-    ];
     return (
       <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
         <div style={{ padding: '32px 40px 0' }}>
@@ -268,16 +264,11 @@ export default function DriverOfferRideScreen({ activityState }) {
                 </div>
               ))}
             </div>
-            <div style={{ background: 'var(--ink-950)', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 14 }}>How it works</div>
-              {steps.map((step, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--voltage-400)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink-950)', fontFamily: 'var(--font-mono)' }}>{i + 1}</span>
-                  </div>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>{step}</span>
-                </div>
-              ))}
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 18px 10px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)' }}>Route preview</div>
+              <Suspense fallback={<div style={{ height: 280, background: 'var(--asphalt-50)' }} />}>
+                <RoutePreviewMap pickup={pickup} dropoff={dropoff} height={280} />
+              </Suspense>
             </div>
           </div>
         </div>
@@ -285,13 +276,23 @@ export default function DriverOfferRideScreen({ activityState }) {
     );
   }
 
+  const hasMapCoords = pickup?.lat != null || dropoff?.lat != null;
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)', paddingBottom: 40 }}>
       <WpAppBar title="Offer a ride" onBack={() => navigate(-1)} dark />
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 20, boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
           {Form()}
         </div>
+        {hasMapCoords && (
+          <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)' }}>Route preview</div>
+            <Suspense fallback={<div style={{ height: 220, background: 'var(--asphalt-50)' }} />}>
+              <RoutePreviewMap pickup={pickup} dropoff={dropoff} height={220} />
+            </Suspense>
+          </div>
+        )}
       </div>
     </div>
   );

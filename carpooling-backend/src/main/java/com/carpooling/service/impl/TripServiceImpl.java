@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -82,7 +83,10 @@ public class TripServiceImpl implements TripService {
         }
         Long orgId = user.getOrganisation().getId();
 
-        return scheduleRepository.findOrgTripFeed(orgId, OffsetDateTime.now(), date)
+        OffsetDateTime dateStart = date != null ? date.atStartOfDay().atOffset(ZoneOffset.UTC) : null;
+        OffsetDateTime dateEnd   = date != null ? date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC) : null;
+
+        return scheduleRepository.findOrgTripFeed(orgId, OffsetDateTime.now(), date, dateStart, dateEnd)
                 .stream()
                 .filter(s -> !s.getDriver().getId().equals(userId))
                 .filter(s -> {

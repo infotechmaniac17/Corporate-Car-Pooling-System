@@ -55,30 +55,33 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
         JOIN FETCH rs.vehicle
         LEFT JOIN FETCH rs.route
         WHERE d.organisation.id = :orgId
-          AND rs.status = com.carpooling.enums.ScheduleStatus.CREATED
+          AND rs.status = 'CREATED'
           AND rs.departureTime > :now
-          AND (:date IS NULL OR CAST(rs.departureTime AS date) = :date)
+          AND (:date IS NULL OR rs.departureTime >= :dateStart AND rs.departureTime < :dateEnd)
         ORDER BY rs.departureTime ASC
         """)
     List<RideSchedule> findOrgTripFeed(
             @Param("orgId") Long orgId,
             @Param("now") OffsetDateTime now,
-            @Param("date") LocalDate date);
+            @Param("date") LocalDate date,
+            @Param("dateStart") OffsetDateTime dateStart,
+            @Param("dateEnd") OffsetDateTime dateEnd);
 
     @Query("""
         SELECT rs FROM RideSchedule rs
         JOIN FETCH rs.driver
         JOIN FETCH rs.vehicle
         LEFT JOIN FETCH rs.route
-        WHERE rs.status = com.carpooling.enums.ScheduleStatus.CREATED
+        WHERE rs.status = 'CREATED'
           AND (:driverName IS NULL OR LOWER(rs.driver.name) LIKE LOWER(CONCAT('%', :driverName, '%')))
-          AND (:departureDate IS NULL OR CAST(rs.departureTime AS date) = :departureDate)
+          AND (:departureDateStart IS NULL OR rs.departureTime >= :departureDateStart AND rs.departureTime < :departureDateEnd)
           AND (:availableSeats IS NULL OR rs.availableSeats >= :availableSeats)
-          AND (:gender IS NULL OR rs.genderPreference = :gender OR rs.genderPreference = com.carpooling.enums.GenderPreference.ANY)
+          AND (:gender IS NULL OR rs.genderPreference = :gender OR rs.genderPreference = 'ANY')
         """)
     List<RideSchedule> searchSchedules(
             @Param("driverName") String driverName,
-            @Param("departureDate") LocalDate departureDate,
+            @Param("departureDateStart") OffsetDateTime departureDateStart,
+            @Param("departureDateEnd") OffsetDateTime departureDateEnd,
             @Param("availableSeats") Short availableSeats,
             @Param("gender") com.carpooling.enums.GenderPreference gender);
 }
