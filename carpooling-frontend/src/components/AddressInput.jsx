@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
+const LocationPickerMap = lazy(() => import('./LocationPickerMap'));
 
 const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_PLACES_KEY;
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -106,6 +107,7 @@ export default function AddressInput({
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const debounceRef = useRef(null);
   const wrapperRef = useRef(null);
 
@@ -215,6 +217,13 @@ export default function AddressInput({
     emit(placeLabel, u, value?.lat, value?.lng);
   };
 
+  const handleMapConfirm = ({ label, lat, lng }) => {
+    setMapOpen(false);
+    setQuery(label);
+    setPlaceLabel(label);
+    emit(label, unit, lat, lng);
+  };
+
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
       {label && (
@@ -247,37 +256,71 @@ export default function AddressInput({
         />
       )}
 
-      <div style={{ position: 'relative' }}>
-        <input
-          type="text"
-          value={query}
-          onChange={handleInput}
-          placeholder={provider ? placeholder : 'Enter address manually (no map provider set)'}
-          style={{
-            width: '100%', padding: '10px 36px 10px 14px',
-            borderRadius: 'var(--radius-md)',
-            border: '1.5px solid var(--asphalt-200)',
-            fontSize: 14, fontFamily: 'var(--font-sans)',
-            color: 'var(--asphalt-900)', background: '#fff',
-            outline: 'none', boxSizing: 'border-box',
-            transition: 'border-color 0.15s',
-          }}
-          onFocus={e => {
-            e.target.style.borderColor = 'var(--ink-600)';
-            if (suggestions.length > 0) setOpen(true);
-          }}
-          onBlur={e => e.target.style.borderColor = 'var(--asphalt-200)'}
-        />
-        <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
-          {fetching ? (
-            <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--asphalt-200)', borderTopColor: 'var(--ink-600)', animation: 'wp-addr-spin 0.7s linear infinite' }} />
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--asphalt-400)" strokeWidth="2.5">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          )}
+      <div style={{ position: 'relative', display: 'flex', gap: 6 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="text"
+            value={query}
+            onChange={handleInput}
+            placeholder={provider ? placeholder : 'Enter address manually'}
+            style={{
+              width: '100%', padding: '10px 36px 10px 14px',
+              borderRadius: 'var(--radius-md)',
+              border: '1.5px solid var(--asphalt-200)',
+              fontSize: 14, fontFamily: 'var(--font-sans)',
+              color: 'var(--asphalt-900)', background: '#fff',
+              outline: 'none', boxSizing: 'border-box',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={e => {
+              e.target.style.borderColor = 'var(--ink-600)';
+              if (suggestions.length > 0) setOpen(true);
+            }}
+            onBlur={e => e.target.style.borderColor = 'var(--asphalt-200)'}
+          />
+          <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+            {fetching ? (
+              <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--asphalt-200)', borderTopColor: 'var(--ink-600)', animation: 'wp-addr-spin 0.7s linear infinite' }} />
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--asphalt-400)" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            )}
+          </div>
         </div>
+        {/* Map picker button */}
+        <button
+          type="button"
+          onClick={() => setMapOpen(true)}
+          title="Pick on map"
+          style={{
+            width: 42, height: 42, borderRadius: 'var(--radius-md)',
+            border: '1.5px solid var(--asphalt-200)',
+            background: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'border-color 0.15s, background 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-500)'; e.currentTarget.style.background = 'var(--ink-50)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--asphalt-200)'; e.currentTarget.style.background = '#fff'; }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--asphalt-600)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="3 11 22 2 13 21 11 13 3 11" />
+          </svg>
+        </button>
       </div>
+
+      {/* Map picker overlay */}
+      {mapOpen && (
+        <Suspense fallback={null}>
+          <LocationPickerMap
+            title={label || placeholder}
+            initialLat={value?.lat}
+            initialLng={value?.lng}
+            onConfirm={handleMapConfirm}
+            onClose={() => setMapOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {open && suggestions.length > 0 && (
         <div style={{

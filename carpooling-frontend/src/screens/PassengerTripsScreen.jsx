@@ -4,6 +4,7 @@ import WpAppBar from '../components/WpAppBar';
 import WpButton from '../components/WpButton';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
+import RouteDisplay from '../components/RouteDisplay';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getMyBookings } from '../api/trips';
 import { cancelBooking } from '../api/trips';
@@ -32,12 +33,10 @@ function TripCard({ trip, onTrack, onChat, onRate, onCancel, cancelling }) {
       background: '#fff', borderRadius: 'var(--radius-lg)', padding: '16px',
       boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 10 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {trip.pickupLabel || 'Pickup'} → {trip.dropoffLabel || 'Drop-off'}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
+          <RouteDisplay pickup={trip.pickupLabel} dropoff={trip.dropoffLabel} />
+          <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 8 }}>
             {dateStr} · {timeStr}
           </div>
         </div>
@@ -210,12 +209,10 @@ export default function PassengerTripsScreen() {
                   background: '#fff', borderRadius: 'var(--radius-lg)', padding: '16px',
                   boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 10 }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3 }}>
-                        {r.pickupLabel || 'Pickup'} → {r.dropoffLabel || 'Drop-off'}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
+                      <RouteDisplay pickup={r.pickupLabel} dropoff={r.dropoffLabel} />
+                      <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 8 }}>
                         {when} · driver {r.driverName || '—'}
                       </div>
                     </div>

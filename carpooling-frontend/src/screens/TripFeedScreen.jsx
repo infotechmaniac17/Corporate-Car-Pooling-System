@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WpAppBar from '../components/WpAppBar';
 import WpButton from '../components/WpButton';
@@ -8,6 +8,8 @@ import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { useAuth } from '../context/AuthContext';
 import { getTripFeed } from '../api/trips';
+
+const EmbeddedMap = lazy(() => import('../components/EmbeddedMap'));
 
 const SORTS = ['Soonest', 'Most seats', 'Cheapest', 'Top rated'];
 
@@ -232,16 +234,43 @@ export default function TripFeedScreen({ onBack }) {
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginBottom: 10 }}>Sort by</div>
               <SortChips vertical />
             </div>
-            <div style={{ background: 'var(--ink-950)', borderRadius: 'var(--radius-xl)', padding: '16px 20px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 10 }}>How it works</div>
-              {['Browse trips published by colleagues', 'Click a trip to view route and details', 'Book a seat with one tap', 'Get notified when driver is en route'].map((step, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--voltage-400)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--ink-950)', fontFamily: 'var(--font-mono)' }}>{i + 1}</span>
-                  </div>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>{step}</span>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', overflow: 'hidden', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
+              {/* Embedded map */}
+              <div style={{ position: 'relative', height: 180 }}>
+                <Suspense fallback={<div style={{ height: 180, background: 'var(--asphalt-100)' }} />}>
+                  <EmbeddedMap
+                    lat={currentUser?.homeLat}
+                    lng={currentUser?.homeLng}
+                    zoom={13}
+                    height={180}
+                  />
+                </Suspense>
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
+                  padding: '20px 12px 10px',
+                }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>
+                    How it works
+                  </span>
                 </div>
-              ))}
+              </div>
+              {/* Steps */}
+              <div style={{ padding: '12px 14px' }}>
+                {[
+                  { icon: 'search', text: 'Browse trips by colleagues' },
+                  { icon: 'list', text: 'Click a trip to view details' },
+                  { icon: 'users', text: 'Book a seat with one tap' },
+                  { icon: 'map', text: 'Track your ride live' },
+                ].map((s, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 3 ? 10 : 0, alignItems: 'center' }}>
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--ink-950)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <WpIcon name={s.icon} size={11} color="var(--voltage-400)" />
+                    </div>
+                    <span style={{ fontSize: 12, color: 'var(--asphalt-600)', fontFamily: 'var(--font-sans)', lineHeight: 1.4 }}>{s.text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

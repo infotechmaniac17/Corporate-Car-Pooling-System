@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
 import * as authApi from '../api/auth';
 import { logoutApi } from '../api/auth';
+
+function getTokenExpiry(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1])).exp * 1000;
+  } catch { return null; }
+}
 
 const AuthContext = createContext(null);
 
@@ -111,6 +118,46 @@ export function AuthProvider({ children }) {
     setActiveModeState('rider');
     setPendingRoleSelection(null);
   }, []);
+
+  // Triggered by api/client.js when token refresh fails — clears React state
+  useEffect(() => {
+    const handleForceLogout = () => {
+      setToken(null);
+      setCurrentUser(null);
+      setActiveModeState('rider');
+      setPendingRoleSelection(null);
+    };
+    window.addEventListener('auth:force-logout', handleForceLogout);
+    return () => window.removeEventListener('auth:force-logout', handleForceLogout);
+  }, []);
+
+  // Proactive refresh: silently renew access token 2 min before expiry
+  // so requests never hit the server with an expired token (eliminates 401 console noise)
+  useEffect(() => {
+    if (!token) return;
+    const exp = getTokenExpiry(token);
+    if (!exp) return;
+    const msUntilRefresh = exp - Date.now() - 2 * 60 * 1000;
+    if (msUntilRefresh <= 0) return;
+
+    const timer = setTimeout(async () => {
+      const rt = localStorage.getItem('wp_refresh_token');
+      if (!rt) return;
+      try {
+        const res = await axios.post(
+          `http://localhost:8081/api/auth/refresh?refreshToken=${encodeURIComponent(rt)}`
+        );
+        const { token: newToken, refreshToken: newRefresh } = res.data?.data || {};
+        if (newToken) {
+          localStorage.setItem('wp_token', newToken);
+          if (newRefresh) localStorage.setItem('wp_refresh_token', newRefresh);
+          setToken(newToken);
+        }
+      } catch { /* silent — interceptor handles it if a request fires after expiry */ }
+    }, msUntilRefresh);
+
+    return () => clearTimeout(timer);
+  }, [token]);
 
   return (
     <AuthContext.Provider value={{

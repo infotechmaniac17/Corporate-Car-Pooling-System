@@ -5,6 +5,7 @@ import WpAppBar from '../components/WpAppBar';
 import WpButton from '../components/WpButton';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
+import RouteDisplay from '../components/RouteDisplay';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useDriverLocationStream from '../hooks/useDriverLocationStream';
 import { getMyDriverTrips } from '../api/trips';
@@ -27,12 +28,10 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling, onStartRide, onE
       background: '#fff', borderRadius: 'var(--radius-lg)', padding: '16px',
       boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 10 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {ride.pickupLabel || 'Pickup'} → {ride.dropoffLabel || 'Drop-off'}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)' }}>
+          <RouteDisplay pickup={ride.pickupLabel} dropoff={ride.dropoffLabel} />
+          <div style={{ fontSize: 11, color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginTop: 8 }}>
             {dateStr} · {timeStr}
           </div>
         </div>

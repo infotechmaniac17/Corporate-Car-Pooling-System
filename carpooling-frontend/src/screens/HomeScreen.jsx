@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import WpAppBar from '../components/WpAppBar';
@@ -9,6 +9,8 @@ import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { getMyRequests, getSchedule, getDriverRequests } from '../api/rides';
 import { getUser } from '../api/users';
+
+const EmbeddedMap = lazy(() => import('../components/EmbeddedMap'));
 
 function getDayTime() {
   const now = new Date();
@@ -234,6 +236,91 @@ function RiderHome({ activityState }) {
     </div>
   );
 
+  const HOW_IT_WORKS = [
+    { icon: 'search', text: 'Browse trips published by colleagues' },
+    { icon: 'users', text: 'Request a seat — driver confirms' },
+    { icon: 'map', text: 'Track your ride live on the map' },
+    { icon: 'leaf', text: 'Save money and cut your carbon footprint' },
+  ];
+
+  const TIPS = [
+    { emoji: '⏱', title: 'Be on time', desc: 'Drivers wait 3 min max. Be at pickup on time.' },
+    { emoji: '✨', title: 'Keep it tidy', desc: 'No food, no smoking. Leave it as you found it.' },
+    { emoji: '⭐', title: 'Rate your ride', desc: 'Ratings help the whole community stay great.' },
+    { emoji: '📍', title: 'Pin your home', desc: 'Set your home address for instant pre-fill.' },
+  ];
+
+  const HowItWorksSection = () => (
+    <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', overflow: 'hidden', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+      {/* Map panel */}
+      <div style={{ position: 'relative', height: 200, background: 'var(--asphalt-100)', overflow: 'hidden' }}>
+        <Suspense fallback={<div style={{ height: 200, background: 'var(--asphalt-100)' }} />}>
+          <EmbeddedMap
+            lat={currentUser?.homeLat}
+            lng={currentUser?.homeLng}
+            zoom={14}
+            height={200}
+          />
+        </Suspense>
+        {/* Overlay label */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)',
+          padding: '20px 16px 12px',
+        }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
+            How it works
+          </span>
+        </div>
+      </div>
+      {/* Steps */}
+      <div style={{ padding: '16px' }}>
+        {HOW_IT_WORKS.map((s, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: i < HOW_IT_WORKS.length - 1 ? 14 : 0 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'var(--ink-950)', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative',
+            }}>
+              <WpIcon name={s.icon} size={14} color="var(--voltage-400)" />
+              <div style={{
+                position: 'absolute', top: -2, right: -2,
+                width: 14, height: 14, borderRadius: '50%',
+                background: 'var(--voltage-400)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '2px solid #fff',
+              }}>
+                <span style={{ fontSize: 7, fontWeight: 800, color: 'var(--ink-950)', fontFamily: 'var(--font-mono)' }}>{i + 1}</span>
+              </div>
+            </div>
+            <span style={{ fontSize: 13, color: 'var(--asphalt-700)', fontFamily: 'var(--font-sans)', lineHeight: 1.4 }}>{s.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const TipsSection = () => (
+    <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: '20px', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--asphalt-400)', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>
+        Tips for a great ride
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {TIPS.map((tip, i) => (
+          <div key={i} style={{
+            background: 'var(--asphalt-50)', borderRadius: 'var(--radius-lg)',
+            padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 6,
+          }}>
+            <span style={{ fontSize: 22 }}>{tip.emoji}</span>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-900)', fontFamily: 'var(--font-sans)' }}>{tip.title}</div>
+            <div style={{ fontSize: 11, color: 'var(--asphalt-500)', fontFamily: 'var(--font-sans)', lineHeight: 1.4 }}>{tip.desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   if (isDesktop) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)' }}>
@@ -262,6 +349,8 @@ function RiderHome({ activityState }) {
               </div>
             )}
             <StatsRow />
+            <HowItWorksSection />
+            <TipsSection />
           </div>
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: '24px', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
             <UpcomingSection />
@@ -299,7 +388,9 @@ function RiderHome({ activityState }) {
         </div>
       )}
       <div style={{ margin: '0 16px 20px' }}><StatsRow compact /></div>
-      <div style={{ margin: '0 16px' }}><UpcomingSection /></div>
+      <div style={{ margin: '0 16px 20px' }}><UpcomingSection /></div>
+      <div style={{ margin: '0 16px 20px' }}><HowItWorksSection /></div>
+      <div style={{ margin: '0 16px 20px' }}><TipsSection /></div>
       <WpBottomNav active={tab} onTap={handleTabTap} />
     </div>
   );
