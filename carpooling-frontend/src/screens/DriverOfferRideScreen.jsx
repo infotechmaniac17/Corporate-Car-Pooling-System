@@ -6,7 +6,7 @@ import WpButton from '../components/WpButton';
 import WpIcon from '../components/WpIcon';
 import AddressInput from '../components/AddressInput';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { createSchedule } from '../api/rides';
+import { publishTrip } from '../api/trips';
 import { getMyVehicles } from '../api/vehicles';
 
 function Field({ label, children }) {
@@ -55,6 +55,7 @@ export default function DriverOfferRideScreen({ activityState }) {
   const [time, setTime] = useState('08:30');
   const [seats, setSeats] = useState(3);
   const [fare, setFare] = useState('');
+  const [recurringDays, setRecurringDays] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -91,13 +92,14 @@ export default function DriverOfferRideScreen({ activityState }) {
     setError('');
     setSubmitting(true);
     try {
-      await createSchedule({
+      await publishTrip({
         vehicleId,
         pickupLat: pickup.lat, pickupLng: pickup.lng, pickupLabel: pickup.label,
         dropoffLat: dropoff.lat, dropoffLng: dropoff.lng, dropoffLabel: dropoff.label,
         departureTime: new Date(`${date}T${time}:00`).toISOString(),
         availableSeats: Number(seats),
         fare: parseFloat(fare),
+        recurringDays: recurringDays.length > 0 ? recurringDays.join(',') : null,
       });
       setSuccess(true);
       setTimeout(() => navigate('/driver/my-rides'), 1200);
@@ -181,6 +183,33 @@ export default function DriverOfferRideScreen({ activityState }) {
         <Field label="Fare per seat (₹)">
           <TextInput value={fare} onChange={setFare} placeholder="e.g. 120" type="number" />
         </Field>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <Field label="Recurring days (optional)">
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(day => {
+                const active = recurringDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setRecurringDays(prev => active ? prev.filter(d => d !== day) : [...prev, day])}
+                    style={{
+                      padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1.5px solid',
+                      borderColor: active ? 'var(--ink-600)' : 'var(--asphalt-200)',
+                      background: active ? 'var(--ink-950)' : '#fff',
+                      color: active ? '#fff' : 'var(--asphalt-600)',
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                      letterSpacing: '.04em',
+                    }}
+                  >{day}</button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--asphalt-400)', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
+              Mark which days you usually run this route
+            </div>
+          </Field>
+        </div>
       </div>
 
       {error && (

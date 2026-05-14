@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long> {
 
@@ -46,7 +47,23 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
         LEFT JOIN FETCH rs.route
         WHERE rs.id = :id
         """)
-    java.util.Optional<RideSchedule> findByIdWithDetails(@Param("id") Long id);
+    Optional<RideSchedule> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("""
+        SELECT rs FROM RideSchedule rs
+        JOIN FETCH rs.driver d
+        JOIN FETCH rs.vehicle
+        LEFT JOIN FETCH rs.route
+        WHERE d.organisation.id = :orgId
+          AND rs.status = com.carpooling.enums.ScheduleStatus.CREATED
+          AND rs.departureTime > :now
+          AND (:date IS NULL OR CAST(rs.departureTime AS date) = :date)
+        ORDER BY rs.departureTime ASC
+        """)
+    List<RideSchedule> findOrgTripFeed(
+            @Param("orgId") Long orgId,
+            @Param("now") OffsetDateTime now,
+            @Param("date") LocalDate date);
 
     @Query("""
         SELECT rs FROM RideSchedule rs

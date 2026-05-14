@@ -5,8 +5,8 @@ import WpButton from '../components/WpButton';
 import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { getMyPassengerTrips } from '../api/trips';
-import { getMyRequests, cancelMyRequest } from '../api/rides';
+import { getMyBookings } from '../api/trips';
+import { cancelBooking } from '../api/trips';
 
 const STATUS_TONE = {
   ACTIVE: 'live',
@@ -14,7 +14,7 @@ const STATUS_TONE = {
   CANCELLED: 'cancelled',
 };
 
-function TripCard({ trip, onTrack, onChat, onRate }) {
+function TripCard({ trip, onTrack, onChat, onRate, onCancel, cancelling }) {
   const scheduled = trip.departureTime ? new Date(trip.departureTime) : null;
   const timeStr = scheduled
     ? scheduled.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -94,6 +94,19 @@ function TripCard({ trip, onTrack, onChat, onRate }) {
             <WpIcon name="star" size={14} color="var(--success-700)" /> Rate driver
           </button>
         )}
+        {!isLive && !isCompleted && trip.status === 'ACTIVE' && onCancel && (
+          <button
+            onClick={() => onCancel(trip)}
+            disabled={cancelling}
+            style={{
+              ...btnStyle('var(--danger-50)', 'var(--danger-700)', '1.5px solid var(--danger-200)'),
+              opacity: cancelling ? 0.5 : 1,
+              cursor: cancelling ? 'wait' : 'pointer',
+            }}
+          >
+            {cancelling ? 'Cancelling…' : 'Cancel booking'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -117,25 +130,40 @@ export default function PassengerTripsScreen() {
 
   const load = () => {
     setLoading(true);
-    Promise.all([
-      getMyPassengerTrips().then(r => r.data?.data || []).catch(() => []),
-      getMyRequests().then(r => r.data?.data || []).catch(() => []),
-    ]).then(([t, q]) => {
-      setTrips(t);
-      setRequests(q);
-    }).finally(() => setLoading(false));
+    getMyBookings()
+      .then(r => {
+        const bookings = r.data?.data || [];
+        // Map bookings to trip-card-compatible shape
+        const mapped = bookings.map(b => ({
+          id: b.id,
+          rideId: b.tripId,
+          driverId: b.driverId,
+          driverName: b.driverName,
+          vehicleNumber: b.vehicleNumber,
+          pickupLabel: b.pickupLabel,
+          dropoffLabel: b.dropoffLabel,
+          departureTime: b.departureTime,
+          fare: b.fare,
+          status: b.status === 'CONFIRMED' ? 'ACTIVE' : b.status,
+          scheduleStatus: b.tripStatus,
+        }));
+        setTrips(mapped);
+        setRequests([]);
+      })
+      .catch(() => setTrips([]))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
 
   const handleCancelRequest = async (req) => {
-    if (!window.confirm('Cancel this ride request?')) return;
+    if (!window.confirm('Cancel this booking?')) return;
     setCancellingId(`req-${req.id}`);
     try {
-      await cancelMyRequest(req.id);
+      await cancelBooking(req.rideId, req.id);
       await load();
     } catch (err) {
-      alert(err?.response?.data?.message || 'Failed to cancel request.');
+      alert(err?.response?.data?.message || 'Failed to cancel booking.');
     } finally {
       setCancellingId(null);
     }
@@ -160,7 +188,7 @@ export default function PassengerTripsScreen() {
         <div style={{ fontSize: 13, color: 'var(--asphalt-500)' }}>
           {upcoming.length} active · {past.length} past
         </div>
-        <WpButton kind="accent" size="sm" onClick={() => navigate('/match')}>
+        <WpButton kind="accent" size="sm" onClick={() => navigate('/trips')}>
           <WpIcon name="search" size={15} color="var(--ink-950)" />
           Find a ride
         </WpButton>
@@ -226,7 +254,7 @@ export default function PassengerTripsScreen() {
           <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--asphalt-600)', marginTop: 12 }}>No trips yet</p>
           <p style={{ fontSize: 13, color: 'var(--asphalt-400)', marginTop: 4 }}>Find a ride to start commuting</p>
           <div style={{ marginTop: 16 }}>
-            <WpButton kind="accent" size="md" onClick={() => navigate('/match')}>Find a ride</WpButton>
+            <WpButton kind="accent" size="md" onClick={() => navigate('/trips')}>Find a ride</WpButton>
           </div>
         </div>
       ) : (
@@ -244,6 +272,8 @@ export default function PassengerTripsScreen() {
                     onTrack={id => navigate(`/tracking/${id}`)}
                     onChat={id => navigate(`/chat/${id}`)}
                     onRate={handleRate}
+                    onCancel={handleCancelRequest}
+                    cancelling={cancellingId === `req-${t.id}`}
                   />
                 ))}
               </div>
@@ -309,7 +339,7 @@ export default function PassengerTripsScreen() {
                 ))}
               </div>
             </div>
-            <WpButton kind="accent" size="md" full onClick={() => navigate('/match')}>
+            <WpButton kind="accent" size="md" full onClick={() => navigate('/trips')}>
               <WpIcon name="search" size={15} color="var(--ink-950)" />
               Find a ride
             </WpButton>

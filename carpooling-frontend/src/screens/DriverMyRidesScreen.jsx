@@ -7,7 +7,8 @@ import WpPill from '../components/WpPill';
 import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useDriverLocationStream from '../hooks/useDriverLocationStream';
-import { getSchedule, cancelSchedule, updateScheduleStatus } from '../api/rides';
+import { getMyDriverTrips } from '../api/trips';
+import { cancelSchedule, updateScheduleStatus } from '../api/rides';
 
 const STATUS_TONE = { CREATED: 'matched', ACTIVE: 'matched', STARTED: 'live', COMPLETED: 'completed', CANCELLED: 'cancelled' };
 
@@ -44,7 +45,7 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling, onStartRide, onE
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <WpIcon name="users" size={14} color="var(--asphalt-500)" />
           <span style={{ fontSize: 13, color: 'var(--asphalt-600)', fontFamily: 'var(--font-mono)' }}>
-            {ride.availableSeats || 0} seats free
+            {ride.seatsLeft ?? ride.availableSeats ?? 0} seats free
           </span>
         </div>
         {ride.fare != null && (
@@ -69,7 +70,7 @@ function RideCard({ ride, onViewRequests, onCancel, cancelling, onStartRide, onE
         >
           View requests →
         </button>
-        {ride.status === 'ACTIVE' && (
+        {(ride.status === 'CREATED' || ride.status === 'ACTIVE') && (
           <button
             onClick={() => onStartRide(ride.id)}
             disabled={statusChanging}
@@ -133,15 +134,14 @@ export default function DriverMyRidesScreen() {
   useDriverLocationStream(startedRideId);
 
   const load = () => {
-    if (!currentUser?.id) return;
     setLoading(true);
-    getSchedule(currentUser.id)
+    getMyDriverTrips()
       .then(res => setRides(res.data?.data || []))
       .catch(() => setRides([]))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [currentUser?.id]);
+  useEffect(() => { load(); }, []);
 
   const handleStartRide = async (rideId) => {
     setStatusChangingId(rideId);
@@ -230,7 +230,7 @@ export default function DriverMyRidesScreen() {
                   <RideCard
                     key={r.id}
                     ride={r}
-                    onViewRequests={id => navigate(`/driver/inbox/${id}`)}
+                    onViewRequests={id => navigate(`/driver/trips/${id}/bookings`)}
                     onCancel={handleCancel}
                     cancelling={cancellingId === r.id}
                     onStartRide={handleStartRide}
@@ -251,7 +251,7 @@ export default function DriverMyRidesScreen() {
                   <RideCard
                     key={r.id}
                     ride={r}
-                    onViewRequests={id => navigate(`/driver/inbox/${id}`)}
+                    onViewRequests={id => navigate(`/driver/trips/${id}/bookings`)}
                     onCancel={handleCancel}
                     cancelling={cancellingId === r.id}
                     onStartRide={handleStartRide}

@@ -18,8 +18,8 @@ const DRIVER_TABS = [
 ];
 
 export default function WpBottomNav({ active, onTap }) {
-  const { isDriver } = useAuth();
-  const tabs = isDriver ? DRIVER_TABS : RIDER_TABS;
+  const { activeMode } = useAuth();
+  const tabs = activeMode === 'driver' ? DRIVER_TABS : RIDER_TABS;
   return (
     <nav
       style={{
