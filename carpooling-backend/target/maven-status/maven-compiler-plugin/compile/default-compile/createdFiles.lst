@@ -1,3 +1,4 @@
+com\carpooling\dto\request\PublishTripRequest.class
 com\carpooling\entity\SosIncident$SosIncidentBuilder.class
 com\carpooling\controller\TripHistoryController.class
 com\carpooling\dto\response\ChatMessageResponse$ChatMessageResponseBuilder.class
@@ -38,6 +39,8 @@ com\carpooling\controller\BackupRideController.class
 com\carpooling\service\impl\RidePassengerServiceImpl.class
 com\carpooling\dto\request\AddWaypointRequest.class
 com\carpooling\entity\RouteWaypoint.class
+com\carpooling\dto\response\TripResponse$TripResponseBuilder.class
+com\carpooling\controller\TripController.class
 com\carpooling\dto\request\ResetPasswordRequest.class
 com\carpooling\dto\request\LoginRequest.class
 com\carpooling\dto\response\RoleRequestResponse$RoleRequestResponseBuilder.class
@@ -68,6 +71,7 @@ com\carpooling\dto\request\TriggerSosRequest.class
 com\carpooling\entity\Notification$NotificationBuilder.class
 com\carpooling\controller\AdminRoleRequestController.class
 com\carpooling\enums\TxnStatus.class
+com\carpooling\dto\response\TripResponse.class
 com\carpooling\service\impl\LocalFileStorageServiceImpl.class
 com\carpooling\common\exception\ResourceNotFoundException.class
 com\carpooling\dto\response\RouteWaypointResponse$RouteWaypointResponseBuilder.class
@@ -83,6 +87,7 @@ com\carpooling\enums\GenderPreference.class
 com\carpooling\service\impl\BackupDriverServiceImpl.class
 com\carpooling\service\impl\OrganisationServiceImpl.class
 com\carpooling\service\impl\UserActivityServiceImpl.class
+com\carpooling\entity\TripBooking.class
 com\carpooling\service\impl\RefreshTokenServiceImpl.class
 com\carpooling\enums\CancellationReason.class
 com\carpooling\service\impl\PaymentServiceImpl.class
@@ -97,12 +102,14 @@ com\carpooling\entity\RideSchedule.class
 com\carpooling\service\RefreshTokenService.class
 com\carpooling\dto\response\PlatformStatsResponse$PlatformStatsResponseBuilder.class
 com\carpooling\service\RideScheduleService.class
+com\carpooling\service\TripService.class
 com\carpooling\dto\response\OrgStatsResponse$OrgStatsResponseBuilder.class
 com\carpooling\entity\ChatMessage$ChatMessageBuilder.class
 com\carpooling\service\impl\RatingServiceImpl.class
 com\carpooling\service\BackupDriverService.class
 com\carpooling\dto\response\SosIncidentResponse$SosIncidentResponseBuilder.class
 com\carpooling\entity\RidePassenger.class
+com\carpooling\dto\response\TripBookingResponse$TripBookingResponseBuilder.class
 com\carpooling\service\impl\RoleRequestServiceImpl.class
 com\carpooling\dto\response\ProfileStatsResponse.class
 com\carpooling\entity\Route$RouteBuilder.class
@@ -127,6 +134,7 @@ com\carpooling\entity\RideEvent$RideEventBuilder.class
 com\carpooling\service\impl\EmailServiceImpl.class
 com\carpooling\dto\response\RouteWaypointResponse.class
 com\carpooling\dto\request\SendMessageRequest.class
+com\carpooling\entity\TripBooking$TripBookingBuilder.class
 com\carpooling\service\impl\RouteWaypointServiceImpl.class
 com\carpooling\dto\request\UpdateOrganisationRequest.class
 com\carpooling\repository\VehicleRepository.class
@@ -135,6 +143,7 @@ com\carpooling\dto\response\TransactionResponse.class
 com\carpooling\controller\RideRequestController.class
 com\carpooling\repository\RideRequestRepository.class
 com\carpooling\dto\response\GuardianContactResponse$GuardianContactResponseBuilder.class
+com\carpooling\repository\TripBookingRepository.class
 com\carpooling\repository\BackupRideRepository.class
 com\carpooling\repository\NotificationRepository.class
 com\carpooling\service\SosService.class
@@ -153,6 +162,7 @@ com\carpooling\dto\response\OrganisationResponse$OrganisationResponseBuilder.cla
 com\carpooling\controller\TrackingController.class
 com\carpooling\dto\response\VehicleResponse$VehicleResponseBuilder.class
 com\carpooling\repository\RouteWaypointRepository.class
+com\carpooling\dto\request\BookTripRequest.class
 com\carpooling\controller\RouteWaypointController.class
 com\carpooling\dto\request\VerifyOtpRequest.class
 com\carpooling\controller\UserController.class
@@ -183,6 +193,7 @@ com\carpooling\dto\response\OrganisationOfficeResponse.class
 com\carpooling\service\GuardianContactService.class
 com\carpooling\entity\RouteWaypoint$RouteWaypointBuilder.class
 com\carpooling\enums\RideEventType.class
+com\carpooling\service\impl\TripServiceImpl.class
 com\carpooling\dto\response\RidePassengerResponse.class
 com\carpooling\repository\OrganisationRepository.class
 com\carpooling\controller\AuthController.class
@@ -201,6 +212,7 @@ com\carpooling\CarpoolingApplication.class
 com\carpooling\service\VehicleService.class
 com\carpooling\controller\GuardianContactController.class
 com\carpooling\dto\response\RideScheduleResponse.class
+com\carpooling\dto\response\TripBookingResponse.class
 com\carpooling\service\impl\ChatServiceImpl.class
 com\carpooling\repository\OrganisationOfficeRepository.class
 com\carpooling\dto\response\RoleRequestResponse.class
