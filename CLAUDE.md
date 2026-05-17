@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository layout
 
 ```
-carpooling-backend/   Spring Boot 3.3 + Java 18 REST API
+carpooling-backend/   Spring Boot 3.3 + Java 21 REST API
 carpooling-frontend/  React 18 + Vite 5 SPA
 MD files/             Architecture notes and update logs
 ```
@@ -45,7 +45,7 @@ No migration tool (Flyway/Liquibase). Run scripts manually in order:
 ```
 carpooling-backend/src/main/resources/db/migration_v3.sql
 ...
-migration_v12.sql   ← latest
+migration_v13.sql   ← latest
 seed_super_admin.sql
 seed_demo.sql       ← optional demo data
 ```
@@ -69,7 +69,7 @@ Requires PostgreSQL 16 with PostGIS enabled on `localhost:5432`, database `carpo
 | Screens | `src/screens/` | Full-page components, role-split (rider vs driver) |
 | Admin | `src/admin/` | Super-admin and org-admin panel screens |
 | Components | `src/components/` | Reusable UI (prefixed `Wp*` for design system) |
-| Hooks | `src/hooks/` | `useIsDesktop`, STOMP streaming hooks |
+| Hooks | `src/hooks/` | `useIsDesktop`, `useUserActivity`, STOMP streaming hooks |
 
 **Auth flow:** JWT (15 min) + refresh token stored in `localStorage` (`wp_token`, `wp_refresh_token`, `wp_user`). `AuthContext` proactively refreshes 2 min before expiry. On refresh failure, fires `auth:force-logout` custom event which `AuthContext` listens for to clear state.
 
@@ -77,12 +77,46 @@ Requires PostgreSQL 16 with PostGIS enabled on `localhost:5432`, database `carpo
 
 **Dual data models — important:**
 - `RideSchedule` / `RideRequest` — original driver-offers / passenger-requests model (used in `MatchingScreen`, driver inbox, older flows)
-- `TripBooking` / `TripController` — newer publish-then-discover model (used in `TripFeedScreen`, `PassengerTripsScreen`, `DriverMyRidesScreen`)
+- `RideSchedule` / `TripBooking` / `TripController` — publish-then-discover model: driver publishes a `RideSchedule`; passengers browse `TripFeedScreen` and book via `TripBooking`. Surfaces in `TripFeedScreen`, `TripDetailScreen`, `PassengerTripsScreen`, `DriverMyRidesScreen`, `DriverTripBookingsScreen`.
+
 Both coexist. Don't conflate them.
+
+**Key screens (current):**
+
+| Screen | Route | Role |
+|---|---|---|
+| `HomeScreen` | `/home` | Rider/driver home with quick-action sections |
+| `TripFeedScreen` | `/trips` | Passenger browses published rides |
+| `TripDetailScreen` | `/trips/:tripId` | Passenger views ride detail + books |
+| `PassengerTripsScreen` | `/my-trips` | Passenger trip history / active bookings |
+| `DriverMyRidesScreen` | `/driver/my-rides` | Driver's published rides list |
+| `DriverTripBookingsScreen` | `/driver/trips/:tripId/bookings` | Driver views who booked a specific trip |
+| `DriverOfferRideScreen` | `/driver/offer-ride` | Driver publishes a new ride (supports recurring) |
+| `DriverInboxScreen` | `/driver/inbox` | Driver sees RideRequests (old matching model) |
+| `MatchingScreen` | `/match` | Passenger searches via old matching model |
+| `TrackingScreen` | `/tracking/:rideId` | Live GPS tracking |
+| `DriverBackupRidesScreen` | `/driver/backup-rides` | Backup ride management |
+
+**Key components (current):**
+
+| Component | Purpose |
+|---|---|
+| `AppShell` | Desktop sidebar + nav wrapper |
+| `WpBottomNav` | Mobile bottom nav bar |
+| `WpToast` | Transient notification toast |
+| `AddressInput` | Google Places / Mapbox autocomplete input |
+| `LocationPickerMap` | Full-screen map for picking a lat/lng (lazy-loaded) |
+| `EmbeddedMap` | Inline read-only map with markers (lazy-loaded) |
+| `RoutePreviewMap` | Map showing a polyline route (lazy-loaded) |
+| `RouteDisplay` | Text route summary (origin → destination, no map) |
+| `RideDetailSheet` | Bottom sheet for ride details (old matching model) |
+| `BookingDetailSheet` | Bottom sheet for TripBooking details |
+
+**Activity tracking:** `useUserActivity` hook tracks idle/active state, passed as `activityState` prop to screens that need it (`HomeScreen`, `ProfileScreen`, `DriverOfferRideScreen`). Calls `src/api/activity.js`.
 
 **Real-time:** STOMP over SockJS (`@stomp/stompjs` + `sockjs-client`). `global: 'globalThis'` in `vite.config.js` is required for SockJS. Hooks: `useDriverLocationStream`, `useTrackingSubscription`.
 
-**Maps:** Leaflet used imperatively (`useRef` + `useEffect` + `import('leaflet')`). **Do not use `react-leaflet` hooks or JSX** — `react-leaflet` v5's `Context.Consumer` is incompatible with React 18. Both `LocationPickerMap` and `EmbeddedMap` are lazy-loaded.
+**Maps:** Leaflet used imperatively (`useRef` + `useEffect` + `import('leaflet')`). **Do not use `react-leaflet` hooks or JSX** — `react-leaflet` v5's `Context.Consumer` is incompatible with React 18. `LocationPickerMap`, `EmbeddedMap`, and `RoutePreviewMap` are lazy-loaded. `RouteDisplay` renders a static route summary without a map instance.
 
 **Styling:** CSS custom properties defined in `src/tokens.css`. No CSS-in-JS framework. Inline styles everywhere using `var(--token-name)`. Responsive via `useIsDesktop` hook (breakpoint: 900px).
 
@@ -116,6 +150,8 @@ common/       ApiResponse<T> wrapper, exception hierarchy
 **Ride lifecycle:** `CREATED → ACTIVE → STARTED → COMPLETED` or `→ CANCELLED`. All transitions must write a `RideEvent` row.
 
 **Matching engine** (`MatchingServiceImpl`): radius search → route overlap check → detour % → seat/gender filters → sort by distance/rating/time.
+
+**Trip / publish-then-discover** (`TripController` → `TripServiceImpl`): drivers publish `RideSchedule` (with optional `recurring_days`); passengers book via `TripBooking`. `migration_v13.sql` adds `booked_seats` + `recurring_days` to `ride_schedules` and creates `trip_bookings` table. Booking status: `CONFIRMED → CANCELLED`.
 
 **Backup driver:** `BackupRide` entity, states `PENDING → ACTIVATED → USED → EXPIRED`. Activated when primary driver cancels or goes unresponsive.
 
