@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Data
 public class PublishTripRequest {
@@ -37,4 +38,7 @@ public class PublishTripRequest {
 
     // Informational: comma-separated day names e.g. "MON,WED,FRI"
     private String recurringDays;
+
+    // GeoJSON coordinates from routing API: [[lng, lat], [lng, lat], ...]
+    private List<List<Double>> routeGeometry;
 }

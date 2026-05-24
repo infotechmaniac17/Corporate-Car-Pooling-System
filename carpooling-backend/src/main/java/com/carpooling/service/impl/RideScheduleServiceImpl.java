@@ -181,9 +181,17 @@ public class RideScheduleServiceImpl implements RideScheduleService {
 
     @Override
     public List<RideScheduleResponse> searchSchedules(String driverName, LocalDate departureDate, Short availableSeats, GenderPreference gender) {
-        OffsetDateTime dateStart = departureDate != null ? departureDate.atStartOfDay().atOffset(ZoneOffset.UTC) : null;
-        OffsetDateTime dateEnd   = departureDate != null ? departureDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC) : null;
-        return rideScheduleRepository.searchSchedules(driverName, dateStart, dateEnd, availableSeats, gender)
+        OffsetDateTime dateStart = departureDate != null
+                ? departureDate.atStartOfDay().atOffset(ZoneOffset.UTC)
+                : OffsetDateTime.now().minusYears(10);
+        OffsetDateTime dateEnd = departureDate != null
+                ? departureDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)
+                : OffsetDateTime.now().plusYears(10);
+        boolean anyGender = (gender == null);
+        GenderPreference genderParam = gender != null ? gender : GenderPreference.ANY;
+        return rideScheduleRepository.searchSchedules(
+                ScheduleStatus.CREATED, driverName, dateStart, dateEnd, availableSeats,
+                genderParam, GenderPreference.ANY, anyGender)
                 .stream().map(this::toResponse).toList();
     }
 

@@ -8,8 +8,19 @@ import AddressInput from '../components/AddressInput';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { publishTrip } from '../api/trips';
 import { getMyVehicles } from '../api/vehicles';
+import { fetchRouteAlternatives } from '../api/routing';
 
 const RoutePreviewMap = lazy(() => import('../components/RoutePreviewMap'));
+
+function formatDist(m) {
+  if (!m) return '—';
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+}
+function formatDur(s) {
+  if (!s) return '—';
+  const m = Math.round(s / 60);
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`;
+}
 
 function Field({ label, children }) {
   return (
@@ -58,6 +69,9 @@ export default function DriverOfferRideScreen({ activityState }) {
   const [seats, setSeats] = useState(3);
   const [fare, setFare] = useState('');
   const [recurringDays, setRecurringDays] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
+  const [routeLoading, setRouteLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -112,6 +126,16 @@ export default function DriverOfferRideScreen({ activityState }) {
     }
   }, [currentUser?.secondaryAddress, currentUser?.secondaryLat, currentUser?.secondaryLng]);
 
+  useEffect(() => {
+    if (!pickup?.lat || !dropoff?.lat) { setRoutes([]); return; }
+    let cancelled = false;
+    setRouteLoading(true);
+    fetchRouteAlternatives(pickup, dropoff)
+      .then(r => { if (!cancelled) { setRoutes(r); setSelectedRouteIndex(0); } })
+      .finally(() => { if (!cancelled) setRouteLoading(false); });
+    return () => { cancelled = true; };
+  }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
+
   const handleSubmit = async () => {
     if (!pickup?.lat || !pickup?.lng) { setError('Pick a pickup location from suggestions.'); return; }
     if (!dropoff?.lat || !dropoff?.lng) { setError('Pick a drop-off location from suggestions.'); return; }
@@ -128,6 +152,7 @@ export default function DriverOfferRideScreen({ activityState }) {
         availableSeats: Number(seats),
         fare: parseFloat(fare),
         recurringDays: recurringDays.length > 0 ? recurringDays.join(',') : null,
+        routeGeometry: routes[selectedRouteIndex]?.coordinates || null,
       });
       setSuccess(true);
       setTimeout(() => navigate('/driver/my-rides'), 1200);
@@ -310,9 +335,38 @@ export default function DriverOfferRideScreen({ activityState }) {
               ))}
             </div>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px 10px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)' }}>Route preview</div>
+              <div style={{ padding: '14px 18px 10px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Route preview</span>
+                {routeLoading && <span style={{ fontSize: 10, color: 'var(--asphalt-400)', fontWeight: 400 }}>Finding routes…</span>}
+              </div>
+              {routes.length > 1 && (
+                <div style={{ display: 'flex', gap: 6, padding: '0 14px 10px', flexWrap: 'wrap' }}>
+                  {routes.map((r, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedRouteIndex(i)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1.5px solid',
+                        borderColor: selectedRouteIndex === i ? 'var(--ink-600)' : 'var(--asphalt-200)',
+                        background: selectedRouteIndex === i ? 'var(--ink-950)' : '#fff',
+                        color: selectedRouteIndex === i ? '#fff' : 'var(--asphalt-700)',
+                        fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                        display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left',
+                      }}
+                    >
+                      <span>Route {i + 1}</span>
+                      <span style={{ fontWeight: 400, fontSize: 10, opacity: 0.8 }}>
+                        {formatDist(r.distanceM)} · {formatDur(r.durationS)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <Suspense fallback={<div style={{ height: 280, background: 'var(--asphalt-50)' }} />}>
-                <RoutePreviewMap pickup={pickup} dropoff={dropoff} height={280} />
+                <RoutePreviewMap
+                  pickup={pickup} dropoff={dropoff} height={280}
+                  routes={routes} selectedRouteIndex={selectedRouteIndex}
+                />
               </Suspense>
             </div>
           </div>
@@ -332,9 +386,38 @@ export default function DriverOfferRideScreen({ activityState }) {
         </div>
         {hasMapCoords && (
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)' }}>Route preview</div>
+            <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Route preview</span>
+              {routeLoading && <span style={{ fontSize: 10, color: 'var(--asphalt-400)', fontWeight: 400 }}>Finding routes…</span>}
+            </div>
+            {routes.length > 1 && (
+              <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px', flexWrap: 'wrap' }}>
+                {routes.map((r, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedRouteIndex(i)}
+                    style={{
+                      padding: '5px 10px', borderRadius: 'var(--radius-md)', border: '1.5px solid',
+                      borderColor: selectedRouteIndex === i ? 'var(--ink-600)' : 'var(--asphalt-200)',
+                      background: selectedRouteIndex === i ? 'var(--ink-950)' : '#fff',
+                      color: selectedRouteIndex === i ? '#fff' : 'var(--asphalt-700)',
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                      display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left',
+                    }}
+                  >
+                    <span>Route {i + 1}</span>
+                    <span style={{ fontWeight: 400, fontSize: 10, opacity: 0.8 }}>
+                      {formatDist(r.distanceM)} · {formatDur(r.durationS)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             <Suspense fallback={<div style={{ height: 220, background: 'var(--asphalt-50)' }} />}>
-              <RoutePreviewMap pickup={pickup} dropoff={dropoff} height={220} />
+              <RoutePreviewMap
+                pickup={pickup} dropoff={dropoff} height={220}
+                routes={routes} selectedRouteIndex={selectedRouteIndex}
+              />
             </Suspense>
           </div>
         )}

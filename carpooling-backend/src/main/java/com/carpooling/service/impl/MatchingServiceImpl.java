@@ -32,7 +32,8 @@ public class MatchingServiceImpl implements MatchingService {
         OffsetDateTime from = request.getDesiredDepartureTime().minusHours(1);
         OffsetDateTime to = request.getDesiredDepartureTime().plusHours(1);
 
-        List<RideSchedule> candidates = rideScheduleRepository.findAvailableSchedules(from, to);
+        List<RideSchedule> candidates = rideScheduleRepository.findAvailableSchedules(
+                com.carpooling.enums.ScheduleStatus.CREATED, from, to);
 
         User passenger = userRepository.findById(passengerId).orElse(null);
         String passengerGender = passenger != null ? passenger.getGender() : null;

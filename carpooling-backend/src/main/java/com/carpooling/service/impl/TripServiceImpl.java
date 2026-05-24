@@ -6,12 +6,14 @@ import com.carpooling.dto.request.PublishTripRequest;
 import com.carpooling.dto.response.TripBookingResponse;
 import com.carpooling.dto.response.TripResponse;
 import com.carpooling.entity.RideSchedule;
+import com.carpooling.entity.Route;
 import com.carpooling.entity.TripBooking;
 import com.carpooling.entity.User;
 import com.carpooling.entity.Vehicle;
 import com.carpooling.enums.ScheduleStatus;
 import com.carpooling.enums.VerificationStatus;
 import com.carpooling.repository.RideScheduleRepository;
+import com.carpooling.repository.RouteRepository;
 import com.carpooling.repository.TripBookingRepository;
 import com.carpooling.repository.UserRepository;
 import com.carpooling.repository.VehicleRepository;
@@ -19,6 +21,7 @@ import com.carpooling.service.TripService;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
@@ -28,7 +31,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +43,7 @@ public class TripServiceImpl implements TripService {
     private final TripBookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final VehicleRepository vehicleRepository;
+    private final RouteRepository routeRepository;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -70,6 +76,21 @@ public class TripServiceImpl implements TripService {
                 .bookedSeats(0)
                 .build();
 
+        if (request.getRouteGeometry() != null && request.getRouteGeometry().size() >= 2) {
+            Coordinate[] coords = request.getRouteGeometry().stream()
+                    .map(pair -> new Coordinate(pair.get(0), pair.get(1))) // lng, lat
+                    .toArray(Coordinate[]::new);
+            LineString lineString = GF.createLineString(coords);
+            double distKm = computeDistanceKm(request.getRouteGeometry());
+            Route route = Route.builder()
+                    .user(driver)
+                    .path(lineString)
+                    .distanceKm(BigDecimal.valueOf(distKm))
+                    .build();
+            route = routeRepository.save(route);
+            schedule.setRoute(route);
+        }
+
         schedule = scheduleRepository.save(schedule);
         return toTripResponse(schedule);
     }
@@ -83,10 +104,16 @@ public class TripServiceImpl implements TripService {
         }
         Long orgId = user.getOrganisation().getId();
 
-        OffsetDateTime dateStart = date != null ? date.atStartOfDay().atOffset(ZoneOffset.UTC) : null;
-        OffsetDateTime dateEnd   = date != null ? date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC) : null;
+        // Always pass non-null date bounds; use far future when no date filter requested.
+        // This avoids IS NULL on typed params which breaks with Hibernate 6 + named enum.
+        OffsetDateTime dateStart = date != null
+                ? date.atStartOfDay().atOffset(ZoneOffset.UTC)
+                : OffsetDateTime.now().minusDays(1);
+        OffsetDateTime dateEnd = date != null
+                ? date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)
+                : OffsetDateTime.now().plusYears(10);
 
-        return scheduleRepository.findOrgTripFeed(orgId, OffsetDateTime.now(), date, dateStart, dateEnd)
+        return scheduleRepository.findOrgTripFeed(orgId, ScheduleStatus.CREATED, OffsetDateTime.now(), dateStart, dateEnd)
                 .stream()
                 .filter(s -> !s.getDriver().getId().equals(userId))
                 .filter(s -> {
@@ -218,8 +245,37 @@ public class TripServiceImpl implements TripService {
         return GF.createPoint(new Coordinate(lng, lat));
     }
 
+    private double computeDistanceKm(List<List<Double>> coords) {
+        double total = 0;
+        for (int i = 0; i < coords.size() - 1; i++) {
+            List<Double> a = coords.get(i);
+            List<Double> b = coords.get(i + 1);
+            total += haversineKm(a.get(1), a.get(0), b.get(1), b.get(0)); // lat, lng
+        }
+        return total;
+    }
+
+    private double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                 * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     private TripResponse toTripResponse(RideSchedule s) {
         int booked = safeBooked(s);
+
+        List<List<Double>> routeGeometry = null;
+        if (s.getRoute() != null && s.getRoute().getPath() != null) {
+            LineString path = s.getRoute().getPath();
+            routeGeometry = Arrays.stream(path.getCoordinates())
+                    .map(c -> Arrays.asList(c.x, c.y)) // [lng, lat]
+                    .collect(Collectors.toList());
+        }
+
         return TripResponse.builder()
                 .id(s.getId())
                 .driverId(s.getDriver().getId())
@@ -243,6 +299,7 @@ public class TripServiceImpl implements TripService {
                 .genderPreference(s.getGenderPreference() != null ? s.getGenderPreference().name() : null)
                 .recurringDays(s.getRecurringDays())
                 .routeId(s.getRoute() != null ? s.getRoute().getId() : null)
+                .routeGeometry(routeGeometry)
                 .build();
     }
 

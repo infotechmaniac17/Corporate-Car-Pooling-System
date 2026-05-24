@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Data @Builder
 public class TripResponse {
@@ -30,4 +31,6 @@ public class TripResponse {
     private String genderPreference;
     private String recurringDays;
     private Long routeId;
+    // [[lng, lat], ...] — null if driver did not select a route
+    private List<List<Double>> routeGeometry;
 }

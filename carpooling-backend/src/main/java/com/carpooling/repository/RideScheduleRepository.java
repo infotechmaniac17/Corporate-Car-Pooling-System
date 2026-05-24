@@ -1,12 +1,12 @@
 package com.carpooling.repository;
 
 import com.carpooling.entity.RideSchedule;
+import com.carpooling.enums.GenderPreference;
 import com.carpooling.enums.ScheduleStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -30,13 +30,15 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
     List<RideSchedule> findByStatusInAndDepartureTimeBefore(
             java.util.Collection<ScheduleStatus> statuses, OffsetDateTime before);
 
+    // status passed as param to avoid JPQL inline enum literal — required for @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Query("""
         SELECT rs FROM RideSchedule rs
-        WHERE rs.status = 'CREATED'
+        WHERE rs.status = :status
           AND rs.departureTime BETWEEN :from AND :to
           AND rs.availableSeats > 0
         """)
     List<RideSchedule> findAvailableSchedules(
+            @Param("status") ScheduleStatus status,
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to);
 
@@ -49,39 +51,47 @@ public interface RideScheduleRepository extends JpaRepository<RideSchedule, Long
         """)
     Optional<RideSchedule> findByIdWithDetails(@Param("id") Long id);
 
+    // dateStart/dateEnd always non-null: caller passes far-future when no date filter.
+    // Avoids IS NULL on LocalDate param which fails with Hibernate 6 + named enum types.
     @Query("""
         SELECT rs FROM RideSchedule rs
         JOIN FETCH rs.driver d
         JOIN FETCH rs.vehicle
         LEFT JOIN FETCH rs.route
         WHERE d.organisation.id = :orgId
-          AND rs.status = 'CREATED'
+          AND rs.status = :status
           AND rs.departureTime > :now
-          AND (:date IS NULL OR rs.departureTime >= :dateStart AND rs.departureTime < :dateEnd)
+          AND rs.departureTime >= :dateStart
+          AND rs.departureTime < :dateEnd
         ORDER BY rs.departureTime ASC
         """)
     List<RideSchedule> findOrgTripFeed(
             @Param("orgId") Long orgId,
+            @Param("status") ScheduleStatus status,
             @Param("now") OffsetDateTime now,
-            @Param("date") LocalDate date,
             @Param("dateStart") OffsetDateTime dateStart,
             @Param("dateEnd") OffsetDateTime dateEnd);
 
+    // departureDateStart/End always non-null. gender passed as param; anyGender flag skips gender filter.
     @Query("""
         SELECT rs FROM RideSchedule rs
         JOIN FETCH rs.driver
         JOIN FETCH rs.vehicle
         LEFT JOIN FETCH rs.route
-        WHERE rs.status = 'CREATED'
+        WHERE rs.status = :status
           AND (:driverName IS NULL OR LOWER(rs.driver.name) LIKE LOWER(CONCAT('%', :driverName, '%')))
-          AND (:departureDateStart IS NULL OR rs.departureTime >= :departureDateStart AND rs.departureTime < :departureDateEnd)
+          AND rs.departureTime >= :departureDateStart
+          AND rs.departureTime < :departureDateEnd
+          AND (:anyGender = true OR rs.genderPreference = :gender OR rs.genderPreference = :genderAny)
           AND (:availableSeats IS NULL OR rs.availableSeats >= :availableSeats)
-          AND (:gender IS NULL OR rs.genderPreference = :gender OR rs.genderPreference = 'ANY')
         """)
     List<RideSchedule> searchSchedules(
+            @Param("status") ScheduleStatus status,
             @Param("driverName") String driverName,
             @Param("departureDateStart") OffsetDateTime departureDateStart,
             @Param("departureDateEnd") OffsetDateTime departureDateEnd,
             @Param("availableSeats") Short availableSeats,
-            @Param("gender") com.carpooling.enums.GenderPreference gender);
+            @Param("gender") GenderPreference gender,
+            @Param("genderAny") GenderPreference genderAny,
+            @Param("anyGender") boolean anyGender);
 }

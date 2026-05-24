@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import WpAppBar from '../components/WpAppBar';
 import WpButton from '../components/WpButton';
@@ -8,6 +8,8 @@ import WpIcon from '../components/WpIcon';
 import useIsDesktop from '../hooks/useIsDesktop';
 import { useAuth } from '../context/AuthContext';
 import { getTripById, bookTrip, cancelBooking, getMyBookings } from '../api/trips';
+
+const RoutePreviewMap = lazy(() => import('../components/RoutePreviewMap'));
 
 function getInitials(name) {
   if (!name) return '?';
@@ -185,6 +187,23 @@ export default function TripDetailScreen() {
           </div>
         </div>
       </div>
+
+      {/* Route map */}
+      {trip.pickupLat != null && trip.dropoffLat != null && (
+        <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px 10px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)' }}>
+            Route map
+          </div>
+          <Suspense fallback={<div style={{ height: 220, background: 'var(--asphalt-50)' }} />}>
+            <RoutePreviewMap
+              pickup={{ lat: trip.pickupLat, lng: trip.pickupLng, label: trip.pickupLabel }}
+              dropoff={{ lat: trip.dropoffLat, lng: trip.dropoffLng, label: trip.dropoffLabel }}
+              routeGeometry={trip.routeGeometry || null}
+              height={220}
+            />
+          </Suspense>
+        </div>
+      )}
 
       {/* Seats */}
       <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', padding: 20, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
