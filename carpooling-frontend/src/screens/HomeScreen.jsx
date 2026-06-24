@@ -180,7 +180,7 @@ function RiderHome({ activityState }) {
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#fff', fontFamily: 'var(--font-sans)' }}>
-                {currentUser?.organisationName || 'Office'}
+                {currentUser?.secondaryAddress || currentUser?.organisationName || 'Office'}
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>Drop · ~9:15 AM</div>
             </div>

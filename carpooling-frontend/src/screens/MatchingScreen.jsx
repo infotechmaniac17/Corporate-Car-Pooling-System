@@ -11,6 +11,7 @@ import { findMatches } from '../api/matching';
 import { createRequest } from '../api/rides';
 import { fetchRouteAlternatives } from '../api/routing';
 import { getOrgOffices } from '../api/organisations';
+import { getUser } from '../api/users';
 
 const RoutePreviewMap = lazy(() => import('../components/RoutePreviewMap'));
 
@@ -40,7 +41,7 @@ function defaultDepartureIso() {
 }
 
 export default function MatchingScreen({ onSelect, onBack }) {
-  const { currentUser } = useAuth();
+  const { currentUser, updateUser } = useAuth();
   const isDesktop = useIsDesktop();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -67,9 +68,19 @@ export default function MatchingScreen({ onSelect, onBack }) {
   }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
 
   useEffect(() => {
-    if (!currentUser?.organisationId) return;
-    getOrgOffices(currentUser.organisationId)
-      .then(res => {
+    if (!currentUser?.id) return;
+    const load = async () => {
+      let orgId = currentUser.organisationId;
+      if (!orgId) {
+        try {
+          const res = await getUser(currentUser.id);
+          orgId = res.data?.data?.organisationId;
+          if (orgId) updateUser({ organisationId: orgId });
+        } catch {}
+      }
+      if (!orgId) return;
+      try {
+        const res = await getOrgOffices(orgId);
         const list = res.data?.data || [];
         setOffices(list);
         const primary = list.find(o => o.isPrimary) || list[0];
@@ -77,13 +88,14 @@ export default function MatchingScreen({ onSelect, onBack }) {
           setSelectedOfficeId(primary.id);
           setDropoffAddr({ label: primary.address, lat: primary.lat, lng: primary.lng });
         }
-      })
-      .catch(() => {
+      } catch {
         if (currentUser?.secondaryAddress && currentUser?.secondaryLat != null && currentUser?.secondaryLng != null) {
           setDropoffAddr({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
         }
-      });
-  }, [currentUser?.organisationId]);
+      }
+    };
+    load();
+  }, [currentUser?.id]);
 
   const search = async () => {
     setError('');

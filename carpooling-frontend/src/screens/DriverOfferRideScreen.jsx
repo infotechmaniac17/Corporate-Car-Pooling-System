@@ -10,6 +10,7 @@ import { publishTrip } from '../api/trips';
 import { getMyVehicles } from '../api/vehicles';
 import { fetchRouteAlternatives } from '../api/routing';
 import { getOrgOffices } from '../api/organisations';
+import { getUser } from '../api/users';
 
 const RoutePreviewMap = lazy(() => import('../components/RoutePreviewMap'));
 
@@ -53,7 +54,7 @@ function TextInput({ value, onChange, placeholder, type = 'text', onBlur }) {
 }
 
 export default function DriverOfferRideScreen({ activityState }) {
-  const { currentUser } = useAuth();
+  const { currentUser, updateUser } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const isBlocked = activityState?.hasOpenRequest ?? false;
@@ -125,9 +126,19 @@ export default function DriverOfferRideScreen({ activityState }) {
   }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
 
   useEffect(() => {
-    if (!currentUser?.organisationId) return;
-    getOrgOffices(currentUser.organisationId)
-      .then(res => {
+    if (!currentUser?.id) return;
+    const load = async () => {
+      let orgId = currentUser.organisationId;
+      if (!orgId) {
+        try {
+          const res = await getUser(currentUser.id);
+          orgId = res.data?.data?.organisationId;
+          if (orgId) updateUser({ organisationId: orgId });
+        } catch {}
+      }
+      if (!orgId) return;
+      try {
+        const res = await getOrgOffices(orgId);
         const list = res.data?.data || [];
         setOffices(list);
         const primary = list.find(o => o.isPrimary) || list[0];
@@ -135,14 +146,14 @@ export default function DriverOfferRideScreen({ activityState }) {
           setSelectedOfficeId(primary.id);
           setDropoff({ label: primary.address, lat: primary.lat, lng: primary.lng });
         }
-      })
-      .catch(() => {
-        // fallback: use secondaryAddress if offices fail
+      } catch {
         if (currentUser?.secondaryAddress && currentUser?.secondaryLat && currentUser?.secondaryLng) {
           setDropoff({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
         }
-      });
-  }, [currentUser?.organisationId]);
+      }
+    };
+    load();
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (!pickup?.lat || !dropoff?.lat) { setRoutes([]); return; }
