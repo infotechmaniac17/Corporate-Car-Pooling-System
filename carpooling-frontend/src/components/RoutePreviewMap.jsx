@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 
 function injectPulseStyle() {
@@ -28,15 +28,16 @@ function makeUserIcon(L) {
 
 /**
  * Props:
- *   pickup, dropoff   — { lat, lng, label }
- *   height            — px (default 260)
+ *   pickup, dropoff    — { lat, lng, label }
+ *   height             — px (default 260)
  *
- * Driver (multi-route) mode:
- *   routes            — [{ coordinates: [[lng,lat],...], distanceM, durationS }]
+ * Multi-route mode (driver offer / rider search):
+ *   routes             — [{ coordinates: [[lng,lat],...], distanceM, durationS }]
  *   selectedRouteIndex — number (default 0)
+ *   onSelectRoute      — (index: number) => void — fires when user clicks an alternate route
  *
- * Passenger (read-only) mode:
- *   routeGeometry     — [[lng, lat], ...] — driver's stored route
+ * Passenger read-only mode:
+ *   routeGeometry      — [[lng, lat], ...] — driver's stored route
  *
  * Falls back to dashed straight line if no route data.
  */
@@ -46,12 +47,14 @@ export default function RoutePreviewMap({
   height = 260,
   routes,
   selectedRouteIndex = 0,
+  onSelectRoute,
   routeGeometry,
 }) {
   const divRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({ pickup: null, dropoff: null, userLoc: null });
   const routeLinesRef = useRef([]);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +79,7 @@ export default function RoutePreviewMap({
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
       mapRef.current = map;
+      if (!cancelled) setMapReady(true);
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
@@ -94,6 +98,7 @@ export default function RoutePreviewMap({
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
       markersRef.current = { pickup: null, dropoff: null, userLoc: null };
       routeLinesRef.current = [];
+      setMapReady(false);
     };
   }, []);
 
@@ -121,14 +126,22 @@ export default function RoutePreviewMap({
       const hasSingle = routeGeometry && routeGeometry.length >= 2;
 
       if (hasRoutes) {
-        // Draw unselected routes first (lower visual priority)
+        // Draw unselected routes first — dotted grey (lower visual priority)
         routes.forEach((route, i) => {
           if (i === selectedRouteIndex) return;
           const latlngs = route.coordinates.map(([lng, lat]) => [lat, lng]);
-          const pl = L.polyline(latlngs, { color: '#94a3b8', weight: 4, opacity: 0.5 }).addTo(map);
+          const pl = L.polyline(latlngs, {
+            color: '#94a3b8', weight: 4, opacity: 0.6, dashArray: '8 6',
+          }).addTo(map);
+          if (onSelectRoute) {
+            pl.getElement && (pl.options.className = 'route-alt-line');
+            pl.on('click', (e) => { L.DomEvent.stopPropagation(e); onSelectRoute(i); });
+            pl.on('mouseover', () => { pl.setStyle({ opacity: 0.9, weight: 5 }); map.getContainer().style.cursor = 'pointer'; });
+            pl.on('mouseout',  () => { pl.setStyle({ opacity: 0.6, weight: 4 }); map.getContainer().style.cursor = ''; });
+          }
           routeLinesRef.current.push(pl);
         });
-        // Draw selected route on top
+        // Draw selected route on top — solid dark
         const sel = routes[selectedRouteIndex];
         if (sel) {
           const latlngs = sel.coordinates.map(([lng, lat]) => [lat, lng]);
@@ -167,9 +180,11 @@ export default function RoutePreviewMap({
 
     update();
   }, [
+    mapReady,
     pickup?.lat, pickup?.lng,
     dropoff?.lat, dropoff?.lng,
     routes, selectedRouteIndex,
+    onSelectRoute,
     routeGeometry,
   ]);
 

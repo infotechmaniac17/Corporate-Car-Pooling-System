@@ -446,7 +446,7 @@ export default function MatchingScreen({ onSelect, onBack }) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 500 }}>
-            <RouteSection height={hasMapCoords ? 420 : 320} />
+            {RouteSection({ height: hasMapCoords ? 420 : 320 })}
           </div>
         </div>
       </div>
@@ -463,7 +463,7 @@ export default function MatchingScreen({ onSelect, onBack }) {
 
       {hasMapCoords && (
         <div style={{ padding: '12px 16px 0' }}>
-          <RouteSection height={220} />
+          {RouteSection({ height: 220 })}
         </div>
       )}
 

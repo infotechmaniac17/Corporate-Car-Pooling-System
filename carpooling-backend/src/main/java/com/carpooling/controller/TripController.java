@@ -38,9 +38,15 @@ public class TripController {
     public ResponseEntity<ApiResponse<List<TripResponse>>> getTripFeed(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Integer minSeats,
+            @RequestParam(required = false) Double pickupLat,
+            @RequestParam(required = false) Double pickupLng,
+            @RequestParam(required = false) Double dropoffLat,
+            @RequestParam(required = false) Double dropoffLng,
+            @RequestParam(required = false) Double radiusMeters,
             HttpServletRequest httpRequest) {
         return ResponseEntity.ok(ApiResponse.ok(
-                tripService.getTripFeed(extractUserId(httpRequest), date, minSeats)));
+                tripService.getTripFeed(extractUserId(httpRequest), date, minSeats,
+                        pickupLat, pickupLng, dropoffLat, dropoffLng, radiusMeters)));
     }
 
     @GetMapping("/driver/published")

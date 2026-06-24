@@ -96,7 +96,10 @@ public class TripServiceImpl implements TripService {
     }
 
     @Override
-    public List<TripResponse> getTripFeed(Long userId, LocalDate date, Integer minSeats) {
+    public List<TripResponse> getTripFeed(Long userId, LocalDate date, Integer minSeats,
+                                          Double pickupLat, Double pickupLng,
+                                          Double dropoffLat, Double dropoffLng,
+                                          Double radiusMeters) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
         if (user.getOrganisation() == null) {
@@ -113,12 +116,30 @@ public class TripServiceImpl implements TripService {
                 ? date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)
                 : OffsetDateTime.now().plusYears(10);
 
+        double radius = radiusMeters != null ? radiusMeters : 5000.0;
+        boolean filterByPickup  = pickupLat  != null && pickupLng  != null;
+        boolean filterByDropoff = dropoffLat != null && dropoffLng != null;
+
         return scheduleRepository.findOrgTripFeed(orgId, ScheduleStatus.CREATED, OffsetDateTime.now(), dateStart, dateEnd)
                 .stream()
                 .filter(s -> !s.getDriver().getId().equals(userId))
                 .filter(s -> {
                     int left = s.getAvailableSeats() - safeBooked(s);
                     return minSeats == null ? left > 0 : left >= minSeats;
+                })
+                .filter(s -> {
+                    if (!filterByPickup) return true;
+                    if (s.getPickupLocation() == null) return false;
+                    double distM = haversineKm(pickupLat, pickupLng,
+                            s.getPickupLocation().getY(), s.getPickupLocation().getX()) * 1000.0;
+                    return distM <= radius;
+                })
+                .filter(s -> {
+                    if (!filterByDropoff) return true;
+                    if (s.getDropoffLocation() == null) return false;
+                    double distM = haversineKm(dropoffLat, dropoffLng,
+                            s.getDropoffLocation().getY(), s.getDropoffLocation().getX()) * 1000.0;
+                    return distM <= radius;
                 })
                 .map(this::toTripResponse)
                 .toList();

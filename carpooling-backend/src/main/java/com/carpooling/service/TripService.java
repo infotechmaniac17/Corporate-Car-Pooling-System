@@ -10,7 +10,10 @@ import java.util.List;
 
 public interface TripService {
     TripResponse publishTrip(Long driverId, PublishTripRequest request);
-    List<TripResponse> getTripFeed(Long userId, LocalDate date, Integer minSeats);
+    List<TripResponse> getTripFeed(Long userId, LocalDate date, Integer minSeats,
+                                   Double pickupLat, Double pickupLng,
+                                   Double dropoffLat, Double dropoffLng,
+                                   Double radiusMeters);
     TripResponse getTripById(Long tripId);
     List<TripResponse> getDriverTrips(Long driverId);
     TripBookingResponse bookSeat(Long tripId, Long passengerId, BookTripRequest request);

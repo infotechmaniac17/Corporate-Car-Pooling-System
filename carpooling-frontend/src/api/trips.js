@@ -9,7 +9,7 @@ export const getMyDriverTrips = () => api.get('/trips/driver/published');
 // Driver: bookings for a specific trip
 export const getTripBookings = (tripId) => api.get(`/trips/${tripId}/bookings`);
 
-// Passenger: browse org feed
+// Passenger: browse org feed — pass pickupLat/Lng, dropoffLat/Lng, radiusMeters for location filter
 export const getTripFeed = (params = {}) => api.get('/trips/feed', { params });
 
 // Passenger: trip detail
