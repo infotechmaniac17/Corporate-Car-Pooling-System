@@ -144,23 +144,30 @@ export default function DriverOfferRideScreen({ activityState }) {
 
       // Load org offices for dropoff
       const orgId = profile.organisationId || currentUser.organisationId;
-      if (!orgId) return;
+      const saFallback = profile.secondaryAddress || currentUser.secondaryAddress;
+      const slFallback = profile.secondaryLat ?? currentUser.secondaryLat;
+      const slngFallback = profile.secondaryLng ?? currentUser.secondaryLng;
+
+      const applyFallback = () => {
+        if (saFallback && slFallback != null && slngFallback != null) {
+          setDropoff({ label: saFallback, lat: slFallback, lng: slngFallback });
+        }
+      };
+
+      if (!orgId) { applyFallback(); return; }
       try {
         const res = await getOrgOffices(orgId);
         const list = res.data?.data || [];
         setOffices(list);
-        const primary = list.find(o => o.isPrimary) || list[0];
-        if (primary) {
+        if (list.length > 0) {
+          const primary = list.find(o => o.isPrimary) || list[0];
           setSelectedOfficeId(primary.id);
           setDropoff({ label: primary.address, lat: primary.lat, lng: primary.lng });
+        } else {
+          applyFallback();
         }
       } catch {
-        const sa = profile.secondaryAddress || currentUser.secondaryAddress;
-        const sl = profile.secondaryLat ?? currentUser.secondaryLat;
-        const slng = profile.secondaryLng ?? currentUser.secondaryLng;
-        if (sa && sl != null && slng != null) {
-          setDropoff({ label: sa, lat: sl, lng: slng });
-        }
+        applyFallback();
       }
     };
     init();
