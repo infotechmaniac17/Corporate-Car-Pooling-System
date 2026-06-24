@@ -42,8 +42,8 @@ public class ChatServiceImpl implements ChatService {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", senderId));
 
-        if (schedule.getStatus() != ScheduleStatus.ACTIVE && schedule.getStatus() != ScheduleStatus.STARTED) {
-            throw new BusinessException("Chat only available for active or started rides");
+        if (schedule.getStatus() == ScheduleStatus.COMPLETED || schedule.getStatus() == ScheduleStatus.CANCELLED) {
+            throw new BusinessException("Chat not available for completed or cancelled rides");
         }
 
         ChatMessage msg = chatMessageRepository.save(ChatMessage.builder()
@@ -87,8 +87,8 @@ public class ChatServiceImpl implements ChatService {
         RideSchedule schedule = rideScheduleRepository.findById(rideId)
                 .orElseThrow(() -> new ResourceNotFoundException("RideSchedule", rideId));
 
-        if (schedule.getStatus() != ScheduleStatus.ACTIVE && schedule.getStatus() != ScheduleStatus.STARTED) {
-            throw new BusinessException("Partner contacts only available for active or started rides");
+        if (schedule.getStatus() == ScheduleStatus.COMPLETED || schedule.getStatus() == ScheduleStatus.CANCELLED) {
+            throw new BusinessException("Partner contacts not available for completed or cancelled rides");
         }
 
         Long driverId = schedule.getDriver().getId();

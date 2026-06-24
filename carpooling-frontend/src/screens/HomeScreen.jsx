@@ -118,7 +118,7 @@ function RiderHome({ activityState }) {
         ? getUser(currentUser.id)
             .then(res => {
               const d = res.data.data;
-              updateUser({ homeAddress: d.homeAddress, homeLat: d.homeLat, homeLng: d.homeLng });
+              updateUser({ name: d.name, phone: d.phone, homeAddress: d.homeAddress, homeLat: d.homeLat, homeLng: d.homeLng });
             })
             .catch(() => {})
         : Promise.resolve(),

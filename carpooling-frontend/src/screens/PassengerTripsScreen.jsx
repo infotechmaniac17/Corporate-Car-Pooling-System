@@ -7,6 +7,8 @@ import WpIcon from '../components/WpIcon';
 import WpToast, { useToast } from '../components/WpToast';
 import RoutePreviewMap from '../components/RoutePreviewMap';
 import useIsDesktop from '../hooks/useIsDesktop';
+import useCountdown from '../hooks/useCountdown';
+import useRideEventsSubscription from '../hooks/useRideEventsSubscription';
 import { getMyBookings, cancelBooking } from '../api/trips';
 import { areaLabel, haversineKm, passengerCo2Saved } from '../utils/rideCalc';
 import BookingDetailSheet from '../components/BookingDetailSheet';
@@ -91,6 +93,7 @@ function ActiveBookingCard({ booking, selected, onSelect, onCancelClick, cancell
   const dep = booking.departureTime ? new Date(booking.departureTime) : null;
   const dateStr = dep ? dep.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : '—';
   const timeStr = dep ? dep.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
+  const countdown = useCountdown(booking.departureTime);
 
   const rideId = booking.tripId ?? booking.rideId;
   const inProgress = booking.scheduleStatus === 'STARTED';
@@ -124,9 +127,19 @@ function ActiveBookingCard({ booking, selected, onSelect, onCancelClick, cancell
         <div style={{ flexShrink: 0 }}><WpPill tone={tone}>{label}</WpPill></div>
       </div>
 
-      {/* Row 2 — Date + time */}
-      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)', marginBottom: 10 }}>
-        🗓 {dateStr} · ⏰ {timeStr}
+      {/* Row 2 — Date + time + countdown */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '3px 10px', fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--asphalt-500)', marginBottom: 10 }}>
+        <span>🗓 {dateStr}</span>
+        <span>·</span>
+        <span>⏰ {timeStr}</span>
+        {countdown && vStatus === 'UPCOMING' && (
+          <>
+            <span>·</span>
+            <span style={{ color: countdown.urgent ? 'var(--danger-600)' : 'var(--ink-500)', fontWeight: countdown.urgent ? 700 : 500 }}>
+              {countdown.urgent ? '🔴 ' : '🕐 '}{countdown.label}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Row 3 — Driver + vehicle */}
@@ -151,22 +164,22 @@ function ActiveBookingCard({ booking, selected, onSelect, onCancelClick, cancell
       {/* Row 4 — Actions */}
       <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {vStatus === 'LIVE' && (
-          <>
-            <button
-              onClick={() => navigate(`/tracking/${rideId}`)}
-              aria-label="Track ride"
-              style={{ ...BTN_BASE, border: '1.5px solid var(--ink-200)', background: 'var(--ink-50)', color: 'var(--ink-700)' }}
-            >
-              Track ride
-            </button>
-            <button
-              onClick={() => navigate(`/chat/${rideId}`)}
-              aria-label="Chat with driver"
-              style={{ ...BTN_BASE, border: '1.5px solid var(--asphalt-200)', background: '#fff', color: 'var(--asphalt-700)' }}
-            >
-              Chat
-            </button>
-          </>
+          <button
+            onClick={() => navigate(`/tracking/${rideId}`)}
+            aria-label="Track ride"
+            style={{ ...BTN_BASE, border: '1.5px solid var(--ink-200)', background: 'var(--ink-50)', color: 'var(--ink-700)' }}
+          >
+            Track ride
+          </button>
+        )}
+        {['LIVE', 'UPCOMING', 'IMMINENT'].includes(vStatus) && (
+          <button
+            onClick={() => navigate(`/chat/${rideId}`)}
+            aria-label="Chat with driver"
+            style={{ ...BTN_BASE, border: '1.5px solid var(--asphalt-200)', background: '#fff', color: 'var(--asphalt-700)' }}
+          >
+            💬 Chat
+          </button>
         )}
         {vStatus === 'COMPLETED' && !rated && (
           <button
@@ -408,6 +421,17 @@ export default function PassengerTripsScreen() {
   // Derived lists
   const active = bookings.filter(b => !['COMPLETED', 'CANCELLED'].includes(b.status));
   const past   = bookings.filter(b =>  ['COMPLETED', 'CANCELLED'].includes(b.status));
+
+  // Real-time ride status sync — reload when driver starts/cancels
+  const activeRideIds = active.map(b => b.tripId ?? b.rideId).filter(Boolean);
+  useRideEventsSubscription(activeRideIds, (event) => {
+    load();
+    if (event?.status === 'STARTED') {
+      showToast('Your driver has started the ride! Check the tracking screen.', 'success');
+    } else if (event?.status === 'CANCELLED') {
+      showToast('Your driver has cancelled this ride.', 'error');
+    }
+  });
 
   // Imminent banner
   useEffect(() => {

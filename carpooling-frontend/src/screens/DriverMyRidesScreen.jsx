@@ -7,7 +7,9 @@ import WpIcon from '../components/WpIcon';
 import WpToast, { useToast } from '../components/WpToast';
 import RoutePreviewMap from '../components/RoutePreviewMap';
 import useIsDesktop from '../hooks/useIsDesktop';
+import useCountdown from '../hooks/useCountdown';
 import useDriverLocationStream from '../hooks/useDriverLocationStream';
+import useRideEventsSubscription from '../hooks/useRideEventsSubscription';
 import { getMyDriverTrips } from '../api/trips';
 import { cancelSchedule, updateScheduleStatus } from '../api/rides';
 import {
@@ -98,6 +100,7 @@ function ActiveRideCard({ ride, selected, onSelect, onStart, onEnd, onCancel, st
   const dep = ride.departureTime ? new Date(ride.departureTime) : null;
   const dateStr = dep ? dep.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : '—';
   const timeStr = dep ? dep.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
+  const countdown = useCountdown(ride.departureTime);
 
   const booked = bookedCount(ride);
   const totalSeats = ride.availableSeats ?? 0;
@@ -161,6 +164,14 @@ function ActiveRideCard({ ride, selected, onSelect, onStart, onEnd, onCancel, st
         <span>·</span>
         <span style={{ color: seatsFull ? '#d97706' : undefined }}>👥 {booked}/{totalSeats} seats</span>
         {ride.fare != null && <><span>·</span><span>₹{ride.fare}/seat</span></>}
+        {countdown && !['STARTED', 'OVERDUE'].includes(vStatus) && (
+          <>
+            <span>·</span>
+            <span style={{ color: countdown.urgent ? 'var(--danger-600)' : 'var(--ink-500)', fontWeight: countdown.urgent ? 700 : 500 }}>
+              {countdown.urgent ? '🔴 ' : '🕐 '}{countdown.label}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Overdue notice */}
@@ -540,6 +551,10 @@ export default function DriverMyRidesScreen() {
   // Derived lists
   const upcoming = rides.filter(r => !['COMPLETED', 'CANCELLED'].includes(r.status));
   const past     = rides.filter(r =>  ['COMPLETED', 'CANCELLED'].includes(r.status));
+
+  // Real-time status sync for own published rides
+  const upcomingIds = upcoming.map(r => r.id).filter(Boolean);
+  useRideEventsSubscription(upcomingIds, () => load());
 
   // Imminent banner — check every 60s
   useEffect(() => {

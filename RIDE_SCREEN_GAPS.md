@@ -31,24 +31,25 @@
 
 ## Medium — UX and sync
 
-- [ ] **Fix 6** — Departure countdown timer ("departs in 47 min")
-  - Both screens show static date/time with no countdown urgency
-  - Add live countdown for trips <2h away
+- [x] **Fix 6** — Departure countdown timer ("departs in 47 min")
+  - New `useCountdown` hook — live ticks every 30s, shows for trips <2h away
+  - `PassengerTripsScreen` + `DriverMyRidesScreen` both show countdown chip (urgent=red when ≤30min)
 
-- [ ] **Fix 7** — WebSocket real-time status sync on both screens
-  - Passenger screen doesn't update when driver starts ride
-  - Subscribe to schedule status events on both screens
+- [x] **Fix 7** — WebSocket real-time status sync on both screens
+  - Backend: `RideScheduleServiceImpl.updateStatus` + `cancelSchedule` publish to `/topic/ride/{id}/events`
+  - Frontend: new `useRideEventsSubscription` hook; both screens subscribe and call `load()` on event
 
-- [ ] **Fix 8** — "Trip started" push/toast notification to passengers
-  - Passengers only know ride started if they manually refresh
+- [x] **Fix 8** — "Trip started" push/toast notification to passengers
+  - Backend: on STARTED, notifies each CONFIRMED `TripBooking` passenger via `NotificationService`
+  - Frontend: `PassengerTripsScreen` WS event → shows toast; `AppShell` WS → increments badge in real-time
+  - Added `RIDE_STARTED` to `NotificationType` enum
 
-- [ ] **Fix 9** — Driver cancel cascades to all `TripBooking` records
-  - Current backend `cancelSchedule` (old API) doesn't touch `trip_bookings` table
-  - Need backend cascade + frontend to reflect CANCELLED on passenger side
+- [x] **Fix 9** — Driver cancel cascades to all `TripBooking` records
+  - `cancelSchedule` now cancels all CONFIRMED `TripBooking` rows + sends `RIDE_CANCELLED` notification per passenger
 
-- [ ] **Fix 10** — Pre-ride chat (message driver before trip starts)
-  - Chat screen only accessible once ride is STARTED
-  - Passengers have no way to coordinate pickup pre-departure
+- [x] **Fix 10** — Pre-ride chat (message driver before trip starts)
+  - Backend: `ChatServiceImpl` guards relaxed — blocks only COMPLETED/CANCELLED (was ACTIVE+STARTED only)
+  - Frontend: Chat button now shows for UPCOMING + IMMINENT + LIVE bookings (not just LIVE)
 
 ---
 

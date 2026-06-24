@@ -8,10 +8,14 @@ import com.carpooling.dto.response.RideScheduleResponse;
 import com.carpooling.entity.RideEvent;
 import com.carpooling.entity.RideSchedule;
 import com.carpooling.entity.Route;
+import com.carpooling.entity.TripBooking;
 import com.carpooling.entity.User;
 import com.carpooling.entity.Vehicle;
+import com.carpooling.enums.NotificationType;
 import com.carpooling.enums.RideEventType;
 import com.carpooling.repository.RideEventRepository;
+import com.carpooling.repository.TripBookingRepository;
+import com.carpooling.service.NotificationService;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -31,7 +35,9 @@ import com.carpooling.repository.VehicleRepository;
 import com.carpooling.service.RideScheduleService;
 import com.carpooling.service.UserActivityService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +49,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RideScheduleServiceImpl implements RideScheduleService {
 
     private final RideScheduleRepository rideScheduleRepository;
@@ -53,6 +60,9 @@ public class RideScheduleServiceImpl implements RideScheduleService {
     private final RideRequestRepository rideRequestRepository;
     private final UserActivityService userActivityService;
     private final RideEventRepository rideEventRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final TripBookingRepository tripBookingRepository;
+    private final NotificationService notificationService;
 
     private static final GeometryFactory GF = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -127,6 +137,32 @@ public class RideScheduleServiceImpl implements RideScheduleService {
         RideSchedule saved = rideScheduleRepository.save(schedule);
         logEvent(saved, eventTypeForStatus(newStatus), driverId, null);
 
+        try {
+            messagingTemplate.convertAndSend(
+                "/topic/ride/" + scheduleId + "/events",
+                java.util.Map.of("scheduleId", scheduleId, "status", newStatus.name()));
+        } catch (Exception e) {
+            log.warn("WS event publish failed for schedule {}: {}", scheduleId, e.getMessage());
+        }
+
+        if (newStatus == ScheduleStatus.STARTED) {
+            String driverName = saved.getDriver() != null ? saved.getDriver().getName() : "Your driver";
+            tripBookingRepository.findByRideScheduleIdOrderByCreatedAtAsc(scheduleId).stream()
+                .filter(b -> "CONFIRMED".equals(b.getStatus()))
+                .forEach(b -> {
+                    try {
+                        notificationService.send(
+                            b.getPassenger().getId(),
+                            "Ride started",
+                            driverName + " has started your ride. Check the tracking screen.",
+                            NotificationType.RIDE_STARTED,
+                            scheduleId);
+                    } catch (Exception e) {
+                        log.warn("Notification send failed for passenger {}: {}", b.getPassenger().getId(), e.getMessage());
+                    }
+                });
+        }
+
         if (newStatus == ScheduleStatus.COMPLETED) {
             ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)
                     .forEach(rp -> {
@@ -164,11 +200,38 @@ public class RideScheduleServiceImpl implements RideScheduleService {
         rideScheduleRepository.save(schedule);
         logEvent(schedule, RideEventType.STATUS_CANCELLED, driverId, "{\"source\":\"driver\"}");
 
+        try {
+            messagingTemplate.convertAndSend(
+                "/topic/ride/" + scheduleId + "/events",
+                java.util.Map.of("scheduleId", scheduleId, "status", "CANCELLED"));
+        } catch (Exception e) {
+            log.warn("WS event publish failed for schedule {}: {}", scheduleId, e.getMessage());
+        }
+
         ridePassengerRepository.findByRideIdAndStatus(scheduleId, PassengerStatus.ACTIVE)
                 .forEach(rp -> {
                     rp.setStatus(PassengerStatus.CANCELLED);
                     ridePassengerRepository.save(rp);
                 });
+
+        // Cancel TripBooking records (publish-then-discover model) and notify passengers
+        tripBookingRepository.findByRideScheduleIdOrderByCreatedAtAsc(scheduleId).stream()
+            .filter(b -> "CONFIRMED".equals(b.getStatus()))
+            .forEach(b -> {
+                b.setStatus("CANCELLED");
+                tripBookingRepository.save(b);
+                try {
+                    notificationService.send(
+                        b.getPassenger().getId(),
+                        "Ride cancelled",
+                        "Your driver has cancelled the ride. Please find an alternative.",
+                        NotificationType.RIDE_CANCELLED,
+                        scheduleId);
+                } catch (Exception e) {
+                    log.warn("Notification send failed for passenger {}: {}", b.getPassenger().getId(), e.getMessage());
+                }
+            });
+
         cancelOpenRideRequests(scheduleId);
     }
 
