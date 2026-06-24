@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-const WS_URL = 'http://localhost:8081/ws';
+const WS_URL = `${window.location.protocol}//${window.location.host}/ws`;
 
 export default function useTrackingSubscription(rideId, onLocation) {
   const clientRef = useRef(null);

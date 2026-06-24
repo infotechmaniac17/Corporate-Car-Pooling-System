@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
   });
 
   const isAuthenticated = !!token && !!currentUser;
-  const isDriver = currentUser?.role === 'DRIVER' || currentUser?.role === 'BOTH';
+  const isDriver = currentUser?.role === 'DRIVER' || currentUser?.role === 'BOTH' || currentUser?.driverStatus === 'APPROVED';
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isPendingDriver = currentUser?.driverStatus === 'PENDING';

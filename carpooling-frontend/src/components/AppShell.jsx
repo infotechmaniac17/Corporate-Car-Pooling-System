@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import WpIcon from './WpIcon';
 import WpAvatar from './WpAvatar';
 import { getUnreadCount, getMyNotifications, markAllRead } from '../api/notifications';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 
 const RIDER_NAV = [
   { id: 'home',     label: 'Home',        icon: 'home',    path: '/home' },
@@ -80,22 +78,6 @@ export default function AppShell({ children, activityState }) {
     const interval = setInterval(fetchCount, 30_000);
     return () => clearInterval(interval);
   }, []);
-
-  // WS: increment badge on real-time notification push
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
-      reconnectDelay: 5000,
-      onConnect: () => {
-        client.subscribe(`/topic/user/${currentUser.id}/notifications`, () => {
-          setUnreadCount(c => c + 1);
-        });
-      },
-    });
-    client.activate();
-    return () => client.deactivate();
-  }, [currentUser?.id]);
 
   const openNotifs = async () => {
     setNotifOpen(o => !o);
