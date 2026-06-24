@@ -68,6 +68,7 @@ export default function DriverOfferRideScreen({ activityState }) {
   const [time, setTime] = useState('08:30');
   const [seats, setSeats] = useState(3);
   const [fare, setFare] = useState('');
+  const [fareEdited, setFareEdited] = useState(false);
   const [recurringDays, setRecurringDays] = useState([]);
   const [routes, setRoutes] = useState([]);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
@@ -128,6 +129,7 @@ export default function DriverOfferRideScreen({ activityState }) {
 
   useEffect(() => {
     if (!pickup?.lat || !dropoff?.lat) { setRoutes([]); return; }
+    setFareEdited(false);
     let cancelled = false;
     setRouteLoading(true);
     fetchRouteAlternatives(pickup, dropoff)
@@ -135,6 +137,13 @@ export default function DriverOfferRideScreen({ activityState }) {
       .finally(() => { if (!cancelled) setRouteLoading(false); });
     return () => { cancelled = true; };
   }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
+
+  useEffect(() => {
+    const distM = routes[selectedRouteIndex]?.distanceM;
+    if (!distM || fareEdited) return;
+    const suggested = Math.max(30, Math.round(distM / 1000 * 8 / 5) * 5);
+    setFare(String(suggested));
+  }, [routes, selectedRouteIndex]);
 
   const handleSubmit = async () => {
     if (!pickup?.lat || !pickup?.lng) { setError('Pick a pickup location from suggestions.'); return; }
@@ -190,7 +199,22 @@ export default function DriverOfferRideScreen({ activityState }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ gridColumn: '1 / -1' }}>
           <AddressInput label="Pickup location" value={pickup} onChange={setPickup} placeholder="Where are you starting from?" />
-          <div style={{ height: 18 }} />
+        </div>
+        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', padding: '0 2px', marginTop: -10, marginBottom: -10 }}>
+          <button
+            type="button"
+            onClick={() => { const t = pickup; setPickup(dropoff); setDropoff(t); }}
+            title="Swap pickup and drop-off"
+            style={{
+              width: 32, height: 32, borderRadius: '50%', background: 'var(--asphalt-50)',
+              border: '1.5px solid var(--asphalt-200)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', cursor: 'pointer', zIndex: 1, position: 'relative',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--asphalt-600)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 2L2 4l2 2M2 4h8M10 12l2-2-2-2M12 10H4" />
+            </svg>
+          </button>
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <AddressInput label="Drop-off location" value={dropoff} onChange={setDropoff} placeholder="Where are you going?" />
@@ -253,7 +277,25 @@ export default function DriverOfferRideScreen({ activityState }) {
           </div>
         </Field>
         <Field label="Fare per seat (₹)">
-          <TextInput value={fare} onChange={setFare} placeholder="e.g. 120" type="number" />
+          <TextInput
+            value={fare}
+            onChange={val => { setFare(val); setFareEdited(true); }}
+            placeholder="e.g. 120"
+            type="number"
+          />
+          {(() => {
+            const distM = routes[selectedRouteIndex]?.distanceM;
+            if (!distM) return null;
+            const suggested = Math.max(30, Math.round(distM / 1000 * 8 / 5) * 5);
+            return (
+              <div style={{ fontSize: 11, color: 'var(--asphalt-400)', marginTop: 5, fontFamily: 'var(--font-sans)' }}>
+                {fareEdited
+                  ? <>Suggested ₹{suggested} for {formatDist(distM)} · <button type="button" onClick={() => { setFare(String(suggested)); setFareEdited(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-500)', fontSize: 11, padding: 0, fontFamily: 'var(--font-sans)', textDecoration: 'underline' }}>Reset</button></>
+                  : `₹${suggested} auto-calculated · ₹8/km for ${formatDist(distM)}`
+                }
+              </div>
+            );
+          })()}
         </Field>
         <div style={{ gridColumn: '1 / -1' }}>
           <Field label="Recurring days (optional)">
@@ -320,20 +362,6 @@ export default function DriverOfferRideScreen({ activityState }) {
             {Form()}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Tips for a great ride</div>
-              {tips.map(t => (
-                <div key={t.title} style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <WpIcon name={t.icon} size={16} color={t.color} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 2 }}>{t.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--asphalt-500)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>{t.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
               <div style={{ padding: '14px 18px 10px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>Route preview</span>
@@ -366,8 +394,23 @@ export default function DriverOfferRideScreen({ activityState }) {
                 <RoutePreviewMap
                   pickup={pickup} dropoff={dropoff} height={280}
                   routes={routes} selectedRouteIndex={selectedRouteIndex}
+                  onSelectRoute={setSelectedRouteIndex}
                 />
               </Suspense>
+            </div>
+            <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 24, boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Tips for a great ride</div>
+              {tips.map(t => (
+                <div key={t.title} style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <WpIcon name={t.icon} size={16} color={t.color} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--asphalt-900)', marginBottom: 2 }}>{t.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--asphalt-500)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>{t.desc}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -375,52 +418,49 @@ export default function DriverOfferRideScreen({ activityState }) {
     );
   }
 
-  const hasMapCoords = pickup?.lat != null || dropoff?.lat != null;
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--asphalt-50)', paddingBottom: 40 }}>
       <WpAppBar title="Offer a ride" onBack={() => navigate(-1)} dark />
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Route preview</span>
+            {routeLoading && <span style={{ fontSize: 10, color: 'var(--asphalt-400)', fontWeight: 400 }}>Finding routes…</span>}
+          </div>
+          {routes.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px', flexWrap: 'wrap' }}>
+              {routes.map((r, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedRouteIndex(i)}
+                  style={{
+                    padding: '5px 10px', borderRadius: 'var(--radius-md)', border: '1.5px solid',
+                    borderColor: selectedRouteIndex === i ? 'var(--ink-600)' : 'var(--asphalt-200)',
+                    background: selectedRouteIndex === i ? 'var(--ink-950)' : '#fff',
+                    color: selectedRouteIndex === i ? '#fff' : 'var(--asphalt-700)',
+                    fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                    display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left',
+                  }}
+                >
+                  <span>Route {i + 1}</span>
+                  <span style={{ fontWeight: 400, fontSize: 10, opacity: 0.8 }}>
+                    {formatDist(r.distanceM)} · {formatDur(r.durationS)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          <Suspense fallback={<div style={{ height: 220, background: 'var(--asphalt-50)' }} />}>
+            <RoutePreviewMap
+              pickup={pickup} dropoff={dropoff} height={220}
+              routes={routes} selectedRouteIndex={selectedRouteIndex}
+              onSelectRoute={setSelectedRouteIndex}
+            />
+          </Suspense>
+        </div>
         <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: 20, boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)' }}>
           {Form()}
         </div>
-        {hasMapCoords && (
-          <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Route preview</span>
-              {routeLoading && <span style={{ fontSize: 10, color: 'var(--asphalt-400)', fontWeight: 400 }}>Finding routes…</span>}
-            </div>
-            {routes.length > 1 && (
-              <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px', flexWrap: 'wrap' }}>
-                {routes.map((r, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedRouteIndex(i)}
-                    style={{
-                      padding: '5px 10px', borderRadius: 'var(--radius-md)', border: '1.5px solid',
-                      borderColor: selectedRouteIndex === i ? 'var(--ink-600)' : 'var(--asphalt-200)',
-                      background: selectedRouteIndex === i ? 'var(--ink-950)' : '#fff',
-                      color: selectedRouteIndex === i ? '#fff' : 'var(--asphalt-700)',
-                      fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-mono)',
-                      display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left',
-                    }}
-                  >
-                    <span>Route {i + 1}</span>
-                    <span style={{ fontWeight: 400, fontSize: 10, opacity: 0.8 }}>
-                      {formatDist(r.distanceM)} · {formatDur(r.durationS)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <Suspense fallback={<div style={{ height: 220, background: 'var(--asphalt-50)' }} />}>
-              <RoutePreviewMap
-                pickup={pickup} dropoff={dropoff} height={220}
-                routes={routes} selectedRouteIndex={selectedRouteIndex}
-              />
-            </Suspense>
-          </div>
-        )}
       </div>
     </div>
   );
