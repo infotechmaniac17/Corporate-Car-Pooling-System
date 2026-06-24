@@ -62,22 +62,27 @@ export default function MatchingScreen({ onSelect, onBack }) {
   const [routeLoading, setRouteLoading] = useState(false);
 
   useEffect(() => {
-    if (currentUser?.homeAddress && currentUser?.homeLat != null && currentUser?.homeLng != null) {
-      setPickupAddr({ label: currentUser.homeAddress, lat: currentUser.homeLat, lng: currentUser.homeLng });
-    }
-  }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
-
-  useEffect(() => {
     if (!currentUser?.id) return;
-    const load = async () => {
-      let orgId = currentUser.organisationId;
-      if (!orgId) {
-        try {
-          const res = await getUser(currentUser.id);
-          orgId = res.data?.data?.organisationId;
-          if (orgId) updateUser({ organisationId: orgId });
-        } catch {}
+    const init = async () => {
+      let profile = {};
+      try {
+        const res = await getUser(currentUser.id);
+        profile = res.data?.data || {};
+        updateUser({
+          homeAddress: profile.homeAddress, homeLat: profile.homeLat, homeLng: profile.homeLng,
+          secondaryAddress: profile.secondaryAddress, secondaryLat: profile.secondaryLat, secondaryLng: profile.secondaryLng,
+          organisationId: profile.organisationId, organisationName: profile.organisationName,
+        });
+      } catch {}
+
+      const ha = profile.homeAddress || currentUser.homeAddress;
+      const hl = profile.homeLat ?? currentUser.homeLat;
+      const hlng = profile.homeLng ?? currentUser.homeLng;
+      if (ha && hl != null && hlng != null) {
+        setPickupAddr({ label: ha, lat: hl, lng: hlng });
       }
+
+      const orgId = profile.organisationId || currentUser.organisationId;
       if (!orgId) return;
       try {
         const res = await getOrgOffices(orgId);
@@ -89,12 +94,15 @@ export default function MatchingScreen({ onSelect, onBack }) {
           setDropoffAddr({ label: primary.address, lat: primary.lat, lng: primary.lng });
         }
       } catch {
-        if (currentUser?.secondaryAddress && currentUser?.secondaryLat != null && currentUser?.secondaryLng != null) {
-          setDropoffAddr({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
+        const sa = profile.secondaryAddress || currentUser.secondaryAddress;
+        const sl = profile.secondaryLat ?? currentUser.secondaryLat;
+        const slng = profile.secondaryLng ?? currentUser.secondaryLng;
+        if (sa && sl != null && slng != null) {
+          setDropoffAddr({ label: sa, lat: sl, lng: slng });
         }
       }
     };
-    load();
+    init();
   }, [currentUser?.id]);
 
   const search = async () => {

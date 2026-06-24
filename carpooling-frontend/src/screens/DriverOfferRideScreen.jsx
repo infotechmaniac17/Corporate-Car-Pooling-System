@@ -120,22 +120,30 @@ export default function DriverOfferRideScreen({ activityState }) {
   }, []);
 
   useEffect(() => {
-    if (currentUser?.homeAddress && currentUser?.homeLat && currentUser?.homeLng) {
-      setPickup({ label: currentUser.homeAddress, lat: currentUser.homeLat, lng: currentUser.homeLng });
-    }
-  }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
-
-  useEffect(() => {
     if (!currentUser?.id) return;
-    const load = async () => {
-      let orgId = currentUser.organisationId;
-      if (!orgId) {
-        try {
-          const res = await getUser(currentUser.id);
-          orgId = res.data?.data?.organisationId;
-          if (orgId) updateUser({ organisationId: orgId });
-        } catch {}
+    const init = async () => {
+      // Always fetch fresh profile so pickup + offices load on any entry point
+      let profile = {};
+      try {
+        const res = await getUser(currentUser.id);
+        profile = res.data?.data || {};
+        updateUser({
+          homeAddress: profile.homeAddress, homeLat: profile.homeLat, homeLng: profile.homeLng,
+          secondaryAddress: profile.secondaryAddress, secondaryLat: profile.secondaryLat, secondaryLng: profile.secondaryLng,
+          organisationId: profile.organisationId, organisationName: profile.organisationName,
+        });
+      } catch {}
+
+      // Set pickup from home address
+      const ha = profile.homeAddress || currentUser.homeAddress;
+      const hl = profile.homeLat ?? currentUser.homeLat;
+      const hlng = profile.homeLng ?? currentUser.homeLng;
+      if (ha && hl != null && hlng != null) {
+        setPickup({ label: ha, lat: hl, lng: hlng });
       }
+
+      // Load org offices for dropoff
+      const orgId = profile.organisationId || currentUser.organisationId;
       if (!orgId) return;
       try {
         const res = await getOrgOffices(orgId);
@@ -147,12 +155,15 @@ export default function DriverOfferRideScreen({ activityState }) {
           setDropoff({ label: primary.address, lat: primary.lat, lng: primary.lng });
         }
       } catch {
-        if (currentUser?.secondaryAddress && currentUser?.secondaryLat && currentUser?.secondaryLng) {
-          setDropoff({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
+        const sa = profile.secondaryAddress || currentUser.secondaryAddress;
+        const sl = profile.secondaryLat ?? currentUser.secondaryLat;
+        const slng = profile.secondaryLng ?? currentUser.secondaryLng;
+        if (sa && sl != null && slng != null) {
+          setDropoff({ label: sa, lat: sl, lng: slng });
         }
       }
     };
-    load();
+    init();
   }, [currentUser?.id]);
 
   useEffect(() => {
