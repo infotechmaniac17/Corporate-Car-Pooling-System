@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import WpAppBar from '../components/WpAppBar';
 import WpButton from '../components/WpButton';
 import WpAvatar from '../components/WpAvatar';
@@ -9,6 +9,10 @@ import useIsDesktop from '../hooks/useIsDesktop';
 import { useAuth } from '../context/AuthContext';
 import { findMatches } from '../api/matching';
 import { createRequest } from '../api/rides';
+import { fetchRouteAlternatives } from '../api/routing';
+import { getOrgOffices } from '../api/organisations';
+
+const RoutePreviewMap = lazy(() => import('../components/RoutePreviewMap'));
 
 const FILTERS = ['Closest', 'Earliest', 'Cheapest', 'Top rated'];
 
@@ -49,8 +53,13 @@ export default function MatchingScreen({ onSelect, onBack }) {
   const [pickupAddr, setPickupAddr] = useState(null);
   const [dropoffAddr, setDropoffAddr] = useState(null);
   const [departureIso, setDepartureIso] = useState(defaultDepartureIso());
+  const [offices, setOffices] = useState([]);
+  const [selectedOfficeId, setSelectedOfficeId] = useState(null);
 
-  // Prefill pickup from homeAddress (with coords), dropoff from secondaryAddress (office)
+  const [routes, setRoutes] = useState([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
+  const [routeLoading, setRouteLoading] = useState(false);
+
   useEffect(() => {
     if (currentUser?.homeAddress && currentUser?.homeLat != null && currentUser?.homeLng != null) {
       setPickupAddr({ label: currentUser.homeAddress, lat: currentUser.homeLat, lng: currentUser.homeLng });
@@ -58,10 +67,23 @@ export default function MatchingScreen({ onSelect, onBack }) {
   }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
 
   useEffect(() => {
-    if (currentUser?.secondaryAddress && currentUser?.secondaryLat != null && currentUser?.secondaryLng != null) {
-      setDropoffAddr({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
-    }
-  }, [currentUser?.secondaryAddress, currentUser?.secondaryLat, currentUser?.secondaryLng]);
+    if (!currentUser?.organisationId) return;
+    getOrgOffices(currentUser.organisationId)
+      .then(res => {
+        const list = res.data?.data || [];
+        setOffices(list);
+        const primary = list.find(o => o.isPrimary) || list[0];
+        if (primary) {
+          setSelectedOfficeId(primary.id);
+          setDropoffAddr({ label: primary.address, lat: primary.lat, lng: primary.lng });
+        }
+      })
+      .catch(() => {
+        if (currentUser?.secondaryAddress && currentUser?.secondaryLat != null && currentUser?.secondaryLng != null) {
+          setDropoffAddr({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
+        }
+      });
+  }, [currentUser?.organisationId]);
 
   const search = async () => {
     setError('');
@@ -86,6 +108,17 @@ export default function MatchingScreen({ onSelect, onBack }) {
       setLoading(false);
     }
   };
+
+  // Fetch route alternatives when pickup/dropoff change
+  useEffect(() => {
+    if (!pickupAddr?.lat || !dropoffAddr?.lat) { setRoutes([]); return; }
+    let cancelled = false;
+    setRouteLoading(true);
+    fetchRouteAlternatives(pickupAddr, dropoffAddr)
+      .then(r => { if (!cancelled) { setRoutes(r); setSelectedRouteIndex(0); } })
+      .finally(() => { if (!cancelled) setRouteLoading(false); });
+    return () => { cancelled = true; };
+  }, [pickupAddr?.lat, pickupAddr?.lng, dropoffAddr?.lat, dropoffAddr?.lng]);
 
   // Auto-search once on mount if coords prefilled
   useEffect(() => {
@@ -122,6 +155,12 @@ export default function MatchingScreen({ onSelect, onBack }) {
     }
   };
 
+  const swapAddresses = () => {
+    const t = pickupAddr;
+    setPickupAddr(dropoffAddr);
+    setDropoffAddr(t);
+  };
+
   const SearchInputs = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <AddressInput
@@ -130,12 +169,51 @@ export default function MatchingScreen({ onSelect, onBack }) {
         onChange={setPickupAddr}
         placeholder="Where are you starting from?"
       />
-      <AddressInput
-        label="Drop-off"
-        value={dropoffAddr}
-        onChange={setDropoffAddr}
-        placeholder="Where are you going?"
-      />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 2px', marginTop: -6, marginBottom: -6 }}>
+        <button
+          type="button"
+          onClick={swapAddresses}
+          title="Swap pickup and drop-off"
+          style={{
+            width: 32, height: 32, borderRadius: '50%', background: 'var(--asphalt-50)',
+            border: '1.5px solid var(--asphalt-200)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', cursor: 'pointer', zIndex: 1, position: 'relative',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--asphalt-600)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 2L2 4l2 2M2 4h8M10 12l2-2-2-2M12 10H4" />
+          </svg>
+        </button>
+      </div>
+      {offices.length > 0 ? (
+        <div style={{ marginBottom: 0 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
+            Drop-off office
+          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {offices.map(o => {
+              const sel = selectedOfficeId === o.id;
+              return (
+                <button key={o.id} type="button"
+                  onClick={() => { setSelectedOfficeId(o.id); setDropoffAddr({ label: o.address, lat: o.lat, lng: o.lng }); }}
+                  style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: `1.5px solid ${sel ? 'var(--ink-600)' : 'var(--asphalt-200)'}`, background: sel ? 'var(--ink-950)' : '#fff', textAlign: 'left', cursor: 'pointer', fontFamily: 'var(--font-sans)', width: '100%' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: sel ? '#fff' : 'var(--asphalt-900)' }}>
+                    {o.name}{o.isPrimary ? ' · Primary' : ''}
+                  </div>
+                  <div style={{ fontSize: 11, color: sel ? 'rgba(255,255,255,0.6)' : 'var(--asphalt-500)', marginTop: 2 }}>{o.address}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <AddressInput
+          label="Drop-off"
+          value={dropoffAddr}
+          onChange={setDropoffAddr}
+          placeholder="Where are you going?"
+        />
+      )}
       <div>
         <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-500)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
           Departure time
@@ -189,11 +267,55 @@ export default function MatchingScreen({ onSelect, onBack }) {
     </div>
   );
 
+  const formatDist = (m) => m == null ? '' : m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+  const formatDur  = (s) => s == null ? '' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m` : `${Math.round(s / 60)} min`;
+
   const formatDeparture = (iso) => {
     if (!iso) return '—';
     const d = new Date(iso);
     return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
+
+  const hasMapCoords = pickupAddr?.lat != null || dropoffAddr?.lat != null;
+
+  const RouteSection = ({ height = 260 }) => (
+    <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-1)', border: '1px solid var(--asphalt-100)', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 700, color: 'var(--asphalt-400)', textTransform: 'uppercase', letterSpacing: '.08em', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>Your route</span>
+        {routeLoading && <span style={{ fontSize: 10, color: 'var(--asphalt-400)', fontWeight: 400 }}>Finding routes…</span>}
+      </div>
+      {routes.length > 1 && (
+        <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px', flexWrap: 'wrap' }}>
+          {routes.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedRouteIndex(i)}
+              style={{
+                padding: '5px 12px', borderRadius: 'var(--radius-md)', border: '1.5px solid',
+                borderColor: selectedRouteIndex === i ? 'var(--ink-600)' : 'var(--asphalt-200)',
+                background: selectedRouteIndex === i ? 'var(--ink-950)' : '#fff',
+                color: selectedRouteIndex === i ? '#fff' : 'var(--asphalt-700)',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left',
+              }}
+            >
+              <span>Route {i + 1}{i === 0 ? ' · Shortest' : ''}</span>
+              <span style={{ fontWeight: 400, fontSize: 10, opacity: 0.8 }}>
+                {formatDist(r.distanceM)} · {formatDur(r.durationS)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      <Suspense fallback={<div style={{ height, background: 'var(--asphalt-50)' }} />}>
+        <RoutePreviewMap
+          pickup={pickupAddr} dropoff={dropoffAddr} height={height}
+          routes={routes} selectedRouteIndex={selectedRouteIndex}
+          onSelectRoute={setSelectedRouteIndex}
+        />
+      </Suspense>
+    </div>
+  );
 
   const RideList = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -296,28 +418,8 @@ export default function MatchingScreen({ onSelect, onBack }) {
             <RideList />
           </div>
 
-          <div style={{ background: 'var(--ink-950)', borderRadius: 'var(--radius-2xl)', overflow: 'hidden', position: 'relative', minHeight: '500px' }}>
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M40 0H0V40" stroke="rgba(255,255,255,0.04)" strokeWidth="1" fill="none" />
-                </pattern>
-              </defs>
-              <rect width="800" height="600" fill="url(#grid)" />
-              <path d="M100 500 Q 250 380 400 280 T 720 80" stroke="var(--voltage-400)" strokeWidth="3" fill="none" opacity="0.7" strokeLinecap="round" strokeDasharray="12 6" />
-              <circle cx="100" cy="500" r="12" fill="rgba(255,255,255,0.3)" />
-              <circle cx="100" cy="500" r="6" fill="#fff" />
-              <circle cx="720" cy="80" r="16" fill="var(--voltage-400)" stroke="var(--ink-950)" strokeWidth="3" />
-              <circle cx="720" cy="80" r="7" fill="var(--ink-950)" />
-            </svg>
-            <div style={{ position: 'absolute', bottom: 24, left: 24, right: 24 }}>
-              <div style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', borderRadius: 'var(--radius-xl)', padding: '16px 20px', border: '1px solid rgba(255,255,255,0.12)' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '.06em', marginBottom: '6px' }}>MATCHING AREA</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff', fontFamily: 'var(--font-sans)' }}>
-                  {rides.length} driver{rides.length !== 1 ? 's' : ''} nearby
-                </div>
-              </div>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 500 }}>
+            <RouteSection height={hasMapCoords ? 420 : 320} />
           </div>
         </div>
       </div>
@@ -331,6 +433,12 @@ export default function MatchingScreen({ onSelect, onBack }) {
       <div style={{ background: '#fff', padding: '16px', borderBottom: '1px solid var(--asphalt-100)' }}>
         {SearchInputs()}
       </div>
+
+      {hasMapCoords && (
+        <div style={{ padding: '12px 16px 0' }}>
+          <RouteSection height={220} />
+        </div>
+      )}
 
       <div style={{ padding: '12px 16px', background: '#fff', borderBottom: '1px solid var(--asphalt-100)', display: 'flex', gap: '8px', overflowX: 'auto' }}>
         <FilterChips />

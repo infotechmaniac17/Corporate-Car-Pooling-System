@@ -102,7 +102,7 @@ public class OrganisationController {
     // ── Offices ─────────────────────────────────────────────────────────────
 
     @GetMapping("/{orgId}/offices")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<OrganisationOfficeResponse>>> getOffices(@PathVariable Long orgId) {
         return ResponseEntity.ok(ApiResponse.ok(organisationService.getOrgOffices(orgId)));
     }

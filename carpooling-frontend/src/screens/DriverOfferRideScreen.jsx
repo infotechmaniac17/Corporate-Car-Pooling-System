@@ -9,6 +9,7 @@ import useIsDesktop from '../hooks/useIsDesktop';
 import { publishTrip } from '../api/trips';
 import { getMyVehicles } from '../api/vehicles';
 import { fetchRouteAlternatives } from '../api/routing';
+import { getOrgOffices } from '../api/organisations';
 
 const RoutePreviewMap = lazy(() => import('../components/RoutePreviewMap'));
 
@@ -61,6 +62,8 @@ export default function DriverOfferRideScreen({ activityState }) {
 
   const [pickup, setPickup] = useState(null);
   const [dropoff, setDropoff] = useState(null);
+  const [offices, setOffices] = useState([]);
+  const [selectedOfficeId, setSelectedOfficeId] = useState(null);
   const [vehicles, setVehicles] = useState([]);
   const [vehicleId, setVehicleId] = useState(null);
   const [vehiclesLoaded, setVehiclesLoaded] = useState(false);
@@ -122,10 +125,24 @@ export default function DriverOfferRideScreen({ activityState }) {
   }, [currentUser?.homeAddress, currentUser?.homeLat, currentUser?.homeLng]);
 
   useEffect(() => {
-    if (currentUser?.secondaryAddress && currentUser?.secondaryLat && currentUser?.secondaryLng) {
-      setDropoff({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
-    }
-  }, [currentUser?.secondaryAddress, currentUser?.secondaryLat, currentUser?.secondaryLng]);
+    if (!currentUser?.organisationId) return;
+    getOrgOffices(currentUser.organisationId)
+      .then(res => {
+        const list = res.data?.data || [];
+        setOffices(list);
+        const primary = list.find(o => o.isPrimary) || list[0];
+        if (primary) {
+          setSelectedOfficeId(primary.id);
+          setDropoff({ label: primary.address, lat: primary.lat, lng: primary.lng });
+        }
+      })
+      .catch(() => {
+        // fallback: use secondaryAddress if offices fail
+        if (currentUser?.secondaryAddress && currentUser?.secondaryLat && currentUser?.secondaryLng) {
+          setDropoff({ label: currentUser.secondaryAddress, lat: currentUser.secondaryLat, lng: currentUser.secondaryLng });
+        }
+      });
+  }, [currentUser?.organisationId]);
 
   useEffect(() => {
     if (!pickup?.lat || !dropoff?.lat) { setRoutes([]); return; }
@@ -217,7 +234,27 @@ export default function DriverOfferRideScreen({ activityState }) {
           </button>
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
-          <AddressInput label="Drop-off location" value={dropoff} onChange={setDropoff} placeholder="Where are you going?" />
+          {offices.length > 0 ? (
+            <Field label="Drop-off office">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {offices.map(o => {
+                  const sel = selectedOfficeId === o.id;
+                  return (
+                    <button key={o.id} type="button"
+                      onClick={() => { setSelectedOfficeId(o.id); setDropoff({ label: o.address, lat: o.lat, lng: o.lng }); setFareEdited(false); }}
+                      style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: `1.5px solid ${sel ? 'var(--ink-600)' : 'var(--asphalt-200)'}`, background: sel ? 'var(--ink-950)' : '#fff', textAlign: 'left', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: sel ? '#fff' : 'var(--asphalt-900)' }}>
+                        {o.name}{o.isPrimary ? ' ·  Primary' : ''}
+                      </div>
+                      <div style={{ fontSize: 11, color: sel ? 'rgba(255,255,255,0.6)' : 'var(--asphalt-500)', marginTop: 2 }}>{o.address}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          ) : (
+            <AddressInput label="Drop-off location" value={dropoff} onChange={setDropoff} placeholder="Where are you going?" />
+          )}
           <div style={{ height: 18 }} />
         </div>
         {vehicles.length > 0 && (

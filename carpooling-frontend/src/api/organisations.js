@@ -5,3 +5,6 @@ export const getAllOrganisations = () =>
 
 export const getOrganisation = (id) =>
   api.get(`/organisations/${id}`);
+
+export const getOrgOffices = (orgId) =>
+  api.get(`/organisations/${orgId}/offices`);

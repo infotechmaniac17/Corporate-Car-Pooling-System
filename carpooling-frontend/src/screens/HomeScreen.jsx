@@ -118,7 +118,12 @@ function RiderHome({ activityState }) {
         ? getUser(currentUser.id)
             .then(res => {
               const d = res.data.data;
-              updateUser({ name: d.name, phone: d.phone, homeAddress: d.homeAddress, homeLat: d.homeLat, homeLng: d.homeLng });
+              updateUser({
+                name: d.name, phone: d.phone,
+                homeAddress: d.homeAddress, homeLat: d.homeLat, homeLng: d.homeLng,
+                secondaryAddress: d.secondaryAddress, secondaryLat: d.secondaryLat, secondaryLng: d.secondaryLng,
+                organisationName: d.organisationName, organisationId: d.organisationId,
+              });
             })
             .catch(() => {})
         : Promise.resolve(),
@@ -194,7 +199,7 @@ function RiderHome({ activityState }) {
     </div>
   );
 
-  const StatsRow = ({ compact = false }) => (
+  const StatsRow = ({ compact = false } = {}) => (
     <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr 1fr' : '1fr 1fr 1fr', gap: '10px' }}>
       <StatCard icon="leaf" iconBg="var(--success-100)" iconColor="var(--success-700)" label="CO₂ Saved" value={co2Saved.toFixed(1)} unit="kg" />
       <StatCard icon="wallet" iconBg="var(--ink-50)" iconColor="var(--ink-600)" label="Money Saved" value={`₹${moneySaved}`} unit="/mo" />
@@ -334,7 +339,7 @@ function RiderHome({ activityState }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '24px 40px 40px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <CommuteCard />
+            {CommuteCard()}
             {!currentUser?.homeAddress && (
               <div
                 onClick={() => navigate('/setup-address')}
@@ -348,12 +353,12 @@ function RiderHome({ activityState }) {
                 <WpIcon name="chevron-right" size={15} color="var(--ink-400)" />
               </div>
             )}
-            <StatsRow />
-            <HowItWorksSection />
-            <TipsSection />
+            {StatsRow()}
+            {HowItWorksSection()}
+            {TipsSection()}
           </div>
           <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: '24px', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
-            <UpcomingSection />
+            {UpcomingSection()}
           </div>
         </div>
       </div>
@@ -373,7 +378,7 @@ function RiderHome({ activityState }) {
           </button>
         }
       />
-      <div style={{ margin: '16px' }}><CommuteCard /></div>
+      <div style={{ margin: '16px' }}>{CommuteCard()}</div>
       {!currentUser?.homeAddress && (
         <div
           onClick={() => navigate('/setup-address')}
@@ -387,10 +392,10 @@ function RiderHome({ activityState }) {
           <WpIcon name="chevron-right" size={15} color="var(--ink-400)" />
         </div>
       )}
-      <div style={{ margin: '0 16px 20px' }}><StatsRow compact /></div>
-      <div style={{ margin: '0 16px 20px' }}><UpcomingSection /></div>
-      <div style={{ margin: '0 16px 20px' }}><HowItWorksSection /></div>
-      <div style={{ margin: '0 16px 20px' }}><TipsSection /></div>
+      <div style={{ margin: '0 16px 20px' }}>{StatsRow({ compact: true })}</div>
+      <div style={{ margin: '0 16px 20px' }}>{UpcomingSection()}</div>
+      <div style={{ margin: '0 16px 20px' }}>{HowItWorksSection()}</div>
+      <div style={{ margin: '0 16px 20px' }}>{TipsSection()}</div>
       <WpBottomNav active={tab} onTap={handleTabTap} />
     </div>
   );
@@ -624,13 +629,13 @@ function DriverHome({ activityState }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '24px 40px 40px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <OfferCard />
-            <PendingRequestsBanner />
-            <EarningsCard />
+            {OfferCard()}
+            {PendingRequestsBanner()}
+            {EarningsCard()}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ background: '#fff', borderRadius: 'var(--radius-2xl)', padding: '24px', boxShadow: 'var(--shadow-2)', border: '1px solid var(--asphalt-100)' }}>
-              <QuickActions />
+              {QuickActions()}
             </div>
           </div>
         </div>
@@ -654,8 +659,8 @@ function DriverHome({ activityState }) {
         }
       />
 
-      <div style={{ margin: '16px' }}><OfferCard /></div>
-      <div style={{ margin: '0 16px 16px' }}><PendingRequestsBanner /></div>
+      <div style={{ margin: '16px' }}>{OfferCard()}</div>
+      <div style={{ margin: '0 16px 16px' }}>{PendingRequestsBanner()}</div>
 
       <div style={{ margin: '0 16px 20px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -665,7 +670,7 @@ function DriverHome({ activityState }) {
       </div>
 
       <div style={{ margin: '0 16px 20px' }}>
-        <QuickActions />
+        {QuickActions()}
       </div>
 
       <WpBottomNav active={tab} onTap={handleTabTap} />
